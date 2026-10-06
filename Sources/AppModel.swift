@@ -40,6 +40,9 @@ final class AppModel: ObservableObject {
     }
 
     func save(room: String, speakerIP: String, volumeStep: Int, modifiers: NSEvent.ModifierFlags, inverted: Bool) {
+        guard self.room != room.trimmingCharacters(in: .whitespacesAndNewlines)
+            || self.speakerIP != speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)
+            || self.volumeStep != volumeStep || self.modifiers != modifiers || self.inverted != inverted else { return }
         self.inverted = inverted
         defaults.set(inverted, forKey: "inverted")
         self.modifiers = modifiers

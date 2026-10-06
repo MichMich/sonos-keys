@@ -1,11 +1,13 @@
 import SwiftUI
 import AppKit
+import Darwin
 
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     var onClose: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @State private var loaded = false
     @State private var room = ""
     @State private var speakerIP = ""
     @State private var manual = false
@@ -22,9 +24,15 @@ struct SettingsView: View {
         else { dismiss() }
     }
 
-    private var valid: Bool {
-        !room.isEmpty && !modifiers.isEmpty && (1...20).contains(volumeStep)
-            && (!manual || !speakerIP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    private func applySettings() {
+        guard loaded else { return }
+        var ip = ""
+        if manual {
+            ip = speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)
+            var address = in_addr()
+            if inet_pton(AF_INET, ip, &address) != 1 { ip = model.speakerIP }
+        }
+        model.save(room: room, speakerIP: ip, volumeStep: volumeStep, modifiers: modifiers, inverted: inverted)
     }
 
     private var volumeBar: some View {
@@ -140,7 +148,7 @@ struct SettingsView: View {
                                 get: { modifiers.contains(key.flag) },
                                 set: { selected in
                                     if selected { modifiers.insert(key.flag) }
-                                    else { modifiers.remove(key.flag) }
+                                    else if MediaKeys.modifiers.filter({ modifiers.contains($0.flag) }).count > 1 { modifiers.remove(key.flag) }
                                 }
                             ))
                             .toggleStyle(.checkbox)
@@ -190,16 +198,12 @@ struct SettingsView: View {
                 }
             }
             HStack {
-                Button("Cancel") { close() }
-                    .keyboardShortcut(.cancelAction)
+                Text("Changes apply immediately.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Save") {
-                    model.save(room: room, speakerIP: manual ? speakerIP : "", volumeStep: volumeStep, modifiers: modifiers, inverted: inverted)
-                    if model.error == nil { close() }
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!valid)
+                Button("Close") { close() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
             }
         }
         .padding(24)
@@ -207,6 +211,12 @@ struct SettingsView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .active { model.refreshLoginStatus() }
         }
+        .onChange(of: room) { _ in applySettings() }
+        .onChange(of: speakerIP) { _ in applySettings() }
+        .onChange(of: manual) { _ in applySettings() }
+        .onChange(of: volumeStep) { _ in applySettings() }
+        .onChange(of: modifiers) { _ in applySettings() }
+        .onChange(of: inverted) { _ in applySettings() }
         .onAppear {
             room = model.room
             speakerIP = model.speakerIP
@@ -215,6 +225,7 @@ struct SettingsView: View {
             modifiers = model.modifiers
             inverted = model.inverted
             model.refreshLoginStatus()
+            loaded = true
             model.discoverRooms(speakerIP: speakerIP)
         }
     }

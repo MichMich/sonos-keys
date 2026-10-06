@@ -5,7 +5,7 @@ A small native macOS menu bar app that controls Sonos with modified media keys.
 By default, media keys control your Mac. Hold your selected modifier keys to control Sonos. Command (⌘) is the default.
 
 Enable **Control Sonos by default** to reverse this behavior. Media keys alone control Sonos. Hold all selected modifiers to control your Mac.
-The setting starts off. Save stores your choice. Cancel leaves it unchanged.
+The setting starts off. Changes apply immediately. Close dismisses the settings window.
 
 ## Controls
 
@@ -72,8 +72,8 @@ Ad hoc builds can require new permission approval. Opening System Settings does 
 
 - Manual is off by default. Turn it on to show Speaker IP and its explanation.
 - Enter any speaker's IPv4 address and click Refresh to load rooms without SSDP discovery.
-- With Manual off, the app uses automatic discovery. Save clears the stored address when Manual is off.
-- With Manual on, Save stores the address. Cancel leaves the saved address unchanged.
+- With Manual off, the app uses automatic discovery and clears the stored address.
+- With Manual on, a valid IPv4 address applies immediately. An incomplete address leaves the previous address active.
 - Choose a discovered Sonos room. Use Refresh to repeat discovery.
 - Drag the volume-step bar to select a step from 1 to 20.
 - Choose Command, Option, Control, Shift, Fn / Globe, Caps Lock, or a combination.
@@ -82,7 +82,7 @@ Ad hoc builds can require new permission approval. Opening System Settings does 
 
 Caps Lock uses its on/off state. Fn depends on your keyboard. Option-volume can conflict with macOS sound settings.
 
-Settings use local macOS UserDefaults. No personal room configuration is included in this repository.
+Changes apply immediately and use local macOS UserDefaults. No personal room configuration is included in this repository.
 
 ## Local Sonos control
 
