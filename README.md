@@ -23,6 +23,14 @@ Download the app ZIP and its SHA-256 checksum from [GitHub Releases](https://git
 The signed and notarized app supports Intel and Apple Silicon.
 Extract the ZIP and copy Sonos Keys to Applications. Xcode is not required for the release download.
 
+Or install the app with Homebrew:
+
+```sh
+brew install --cask michmich/tap/sonos-keys
+```
+
+See [the Homebrew tap](https://github.com/MichMich/homebrew-tap) for upgrades and installation notes.
+
 ## Requirements
 
 - macOS 13 or later.
