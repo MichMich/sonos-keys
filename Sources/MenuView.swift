@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct MenuView: View {
     @ObservedObject var model: AppModel
@@ -31,5 +32,18 @@ struct MenuView: View {
         }
         .padding(16)
         .frame(width: 280)
+        .background(MenuBackground())
     }
+}
+
+private struct MenuBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .popover
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }

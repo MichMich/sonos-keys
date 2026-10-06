@@ -18,6 +18,8 @@ The setting starts off. Changes apply immediately. Close dismisses the settings 
 | Volume Down | Decrease room volume |
 | Mute | Toggle room mute |
 
+The menu flyout uses the native macOS popover material with transparency and background blur.
+
 The HUD appears below the menu bar icon. It shows confirmed results and a loading indicator for slow commands. Extra volume presses do not accumulate while a volume request is pending.
 
 ## Download
