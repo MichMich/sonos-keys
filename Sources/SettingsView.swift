@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var room = ""
     @State private var speakerIP = ""
     @State private var manual = false
+    @State private var inverted = false
     @State private var volumeStep = 2
     @State private var modifiers: NSEvent.ModifierFlags = .command
 
@@ -127,8 +128,11 @@ struct SettingsView: View {
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Modifier keys").fontWeight(.medium)
-                    Text("Select the keys to hold together with a media key.")
+                    Text(inverted
+                         ? "Hold all selected keys with a media key to control your Mac."
+                         : "Hold all selected keys with a media key to control Sonos.")
                         .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 12) {
                         ForEach(MediaKeys.modifiers.indices, id: \.self) { index in
                             let key = MediaKeys.modifiers[index]
@@ -142,6 +146,14 @@ struct SettingsView: View {
                             .toggleStyle(.checkbox)
                         }
                     }
+                    Divider()
+                    Toggle("Control Sonos by default", isOn: $inverted)
+                        .toggleStyle(.switch)
+                    Text(inverted
+                         ? "Media keys alone → Sonos\nSelected modifiers + media keys → Mac"
+                         : "Media keys alone → Mac\nSelected modifiers + media keys → Sonos")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("Select at least one key. Caps Lock uses its on/off state. Fn depends on your keyboard.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -182,7 +194,7 @@ struct SettingsView: View {
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Save") {
-                    model.save(room: room, speakerIP: manual ? speakerIP : "", volumeStep: volumeStep, modifiers: modifiers)
+                    model.save(room: room, speakerIP: manual ? speakerIP : "", volumeStep: volumeStep, modifiers: modifiers, inverted: inverted)
                     if model.error == nil { close() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -201,6 +213,7 @@ struct SettingsView: View {
             manual = !model.speakerIP.isEmpty
             volumeStep = model.volumeStep
             modifiers = model.modifiers
+            inverted = model.inverted
             model.refreshLoginStatus()
             model.discoverRooms(speakerIP: speakerIP)
         }

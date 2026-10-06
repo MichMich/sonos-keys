@@ -6,6 +6,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var enabled = false
     @Published private(set) var room: String
     @Published private(set) var speakerIP: String
+    @Published private(set) var inverted: Bool
     @Published private(set) var volumeStep: Int
     @Published private(set) var error: String?
     @Published private(set) var modifiers: NSEvent.ModifierFlags
@@ -31,13 +32,16 @@ final class AppModel: ObservableObject {
         speakerIP = defaults.string(forKey: "speakerIP") ?? ""
         volumeStep = min(20, max(1, defaults.object(forKey: "volumeStep") as? Int ?? 2))
         modifiers = NSEvent.ModifierFlags(rawValue: UInt(defaults.object(forKey: "modifiers") as? Int ?? Int(NSEvent.ModifierFlags.command.rawValue)))
+        inverted = defaults.bool(forKey: "inverted")
         refreshLoginStatus()
         if !room.isEmpty && defaults.object(forKey: "enabled") as? Bool != false {
             DispatchQueue.main.async { [weak self] in self?.enable() }
         }
     }
 
-    func save(room: String, speakerIP: String, volumeStep: Int, modifiers: NSEvent.ModifierFlags) {
+    func save(room: String, speakerIP: String, volumeStep: Int, modifiers: NSEvent.ModifierFlags, inverted: Bool) {
+        self.inverted = inverted
+        defaults.set(inverted, forKey: "inverted")
         self.modifiers = modifiers
         defaults.set(Int(modifiers.rawValue), forKey: "modifiers")
         self.room = room.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -84,7 +88,7 @@ final class AppModel: ObservableObject {
         error = nil
         permissionPage = nil
         let room = room
-        let keys = MediaKeys(Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP)), modifiers: modifiers)
+        let keys = MediaKeys(Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP)), modifiers: modifiers, inverted: inverted)
         keys.onDiscoveryError = { [weak self, weak keys] message in
             guard let self = self, let keys = keys, self.listener === keys else { return }
             self.error = message

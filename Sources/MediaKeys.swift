@@ -11,6 +11,7 @@ final class MediaKeys {
         ("Caps Lock", "⇪", .capsLock)
     ]
 
+    private let inverted: Bool
     private let requiredModifiers: NSEvent.ModifierFlags
     private let sonos: Sonos
     private let worker = DispatchQueue(label: "sonos-keys.network")
@@ -25,7 +26,8 @@ final class MediaKeys {
     var onFeedback: ((SonosFeedback) -> Void)?
     var onError: ((String) -> Void)?
 
-    init(_ sonos: Sonos, modifiers: NSEvent.ModifierFlags) {
+    init(_ sonos: Sonos, modifiers: NSEvent.ModifierFlags, inverted: Bool) {
+        self.inverted = inverted
         self.sonos = sonos
         self.requiredModifiers = modifiers
     }
@@ -47,7 +49,8 @@ final class MediaKeys {
         }
         guard state == 0x0a else { return Unmanaged.passUnretained(event) }
         if !repeated {
-            guard !requiredModifiers.isEmpty && native.modifierFlags.contains(requiredModifiers) else { return Unmanaged.passUnretained(event) }
+            let modifierHeld = native.modifierFlags.contains(requiredModifiers)
+            guard !requiredModifiers.isEmpty && (inverted ? !modifierHeld : modifierHeld) else { return Unmanaged.passUnretained(event) }
             consumed.insert(code)
         }
         guard consumed.contains(code) else { return Unmanaged.passUnretained(event) }

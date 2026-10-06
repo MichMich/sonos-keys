@@ -2,7 +2,10 @@
 
 A small native macOS menu bar app that controls Sonos with modified media keys.
 
-Normal media keys still control your Mac. Hold your selected modifier keys to control Sonos instead. Command (⌘) is the default.
+By default, media keys control your Mac. Hold your selected modifier keys to control Sonos. Command (⌘) is the default.
+
+Enable **Control Sonos by default** to reverse this behavior. Media keys alone control Sonos. Hold all selected modifiers to control your Mac.
+The setting starts off. Save stores your choice. Cancel leaves it unchanged.
 
 ## Controls
 

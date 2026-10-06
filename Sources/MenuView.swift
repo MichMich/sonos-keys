@@ -8,7 +8,7 @@ struct MenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sonos Keys").font(.headline)
-            Text(model.room.isEmpty ? "Configure a Sonos room" : "\(model.modifierTitle) media keys → \(model.room)")
+            Text(model.room.isEmpty ? "Configure a Sonos room" : (model.inverted ? "Media keys → \(model.room) · \(model.modifierTitle) → Mac" : "\(model.modifierTitle) media keys → \(model.room)"))
                 .font(.caption).foregroundStyle(.secondary)
             if let error = model.error {
                 Text(error).font(.caption).foregroundStyle(.red)
