@@ -110,6 +110,7 @@ private struct HUDView: View {
         case .paused: return ("Paused", "pause.fill", nil)
         case .next: return ("Next track", "forward.end.fill", nil)
         case .previous: return ("Previous track", "backward.end.fill", nil)
+        case .restarted: return ("Track restarted", "arrow.counterclockwise", nil)
         case .muted(let muted):
             return (muted ? "Muted" : "Unmuted", muted ? "speaker.slash.fill" : "speaker.wave.2.fill", nil)
         }

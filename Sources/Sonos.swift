@@ -9,6 +9,7 @@ enum SonosFeedback {
     case paused
     case next
     case previous
+    case restarted
     case muted(Bool)
 }
 
@@ -258,6 +259,16 @@ final class Sonos {
                 _ = try soap(coordinator, "AVTransport", "Play", instance + [("Speed", "1")])
                 return .playing
             case "next", "previous":
+                if command == "previous",
+                   let position = try? soap(coordinator, "AVTransport", "GetPositionInfo", instance) {
+                    let fields = position.value("RelTime").split(separator: ":", omittingEmptySubsequences: false)
+                    let time = fields.compactMap { Int($0) }
+                    if fields.count == 3 && time.count == 3 && time.allSatisfy({ $0 >= 0 }) && time[1] < 60 && time[2] < 60,
+                       time[0] > 0 || time[1] > 0 || time[2] > 3,
+                       (try? soap(coordinator, "AVTransport", "Seek", instance + [("Unit", "REL_TIME"), ("Target", "00:00:00")])) != nil {
+                        return .restarted
+                    }
+                }
                 _ = try soap(coordinator, "AVTransport", command == "next" ? "Next" : "Previous", instance)
                 return command == "next" ? .next : .previous
             default: throw Failure(message: "Unknown Sonos command: \(command)")

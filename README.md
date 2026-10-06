@@ -13,13 +13,16 @@ The setting starts off. Changes apply immediately. Close dismisses the settings 
 | Media key | Sonos action |
 | --- | --- |
 | Play/Pause | Toggle playback |
-| Previous | Previous track |
+| Previous | Restart the track after more than 3 seconds, otherwise go to the previous track |
 | Next | Next track |
 | Volume Up | Increase room volume |
 | Volume Down | Decrease room volume |
 | Mute | Toggle room mute |
 
 The menu flyout uses the native macOS popover material with transparency and background blur.
+
+Previous reads the position from the group coordinator. After more than 3 seconds, it seeks to the track start.
+If the position is unavailable or seeking fails, it sends Previous instead. The HUD shows Track restarted after a successful seek.
 
 The HUD appears below the menu bar icon. It shows confirmed results and a loading indicator for slow commands. Extra volume presses do not accumulate while a volume request is pending.
 
