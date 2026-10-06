@@ -49,7 +49,8 @@ A repeated successful run replaces the assets for that tag.
 - Use one universal ZIP to keep the download choice simple.
 - Use native Xcode tools and GitHub CLI. No extra release framework is required.
 - Pin the checkout action to a commit. Credentials are available only in the steps that need them.
-- The first real tag must check the full build, Apple authentication, and notarization.
+- Apple API authentication passed. The `v0.1.0` build stopped on an unsupported About-panel option.
+- The About panel uses the copyright text from `Info.plist`. The `v0.1.1` tag checks the corrected build and notarization.
 - Next task: download the first release and check startup, media keys, permissions, and the About panel.
 
 See [Apple notarization](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow)

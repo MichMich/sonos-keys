@@ -52,7 +52,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: [
             .applicationName: "Sonos Keys",
-            .copyright: "© 2026 Michael Teeuw, Xonay Media",
             .credits: credits
         ])
     }
