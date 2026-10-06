@@ -5,6 +5,7 @@ import ServiceManagement
 final class AppModel: ObservableObject {
     @Published private(set) var enabled = false
     @Published private(set) var room: String
+    @Published private(set) var speakerIP: String
     @Published private(set) var volumeStep: Int
     @Published private(set) var error: String?
     @Published private(set) var modifiers: NSEvent.ModifierFlags
@@ -27,6 +28,7 @@ final class AppModel: ObservableObject {
 
     init() {
         room = defaults.string(forKey: "room") ?? ""
+        speakerIP = defaults.string(forKey: "speakerIP") ?? ""
         volumeStep = min(20, max(1, defaults.object(forKey: "volumeStep") as? Int ?? 2))
         modifiers = NSEvent.ModifierFlags(rawValue: UInt(defaults.object(forKey: "modifiers") as? Int ?? Int(NSEvent.ModifierFlags.command.rawValue)))
         refreshLoginStatus()
@@ -35,22 +37,24 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func save(room: String, volumeStep: Int, modifiers: NSEvent.ModifierFlags) {
+    func save(room: String, speakerIP: String, volumeStep: Int, modifiers: NSEvent.ModifierFlags) {
         self.modifiers = modifiers
         defaults.set(Int(modifiers.rawValue), forKey: "modifiers")
         self.room = room.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.speakerIP = speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)
         self.volumeStep = volumeStep
         defaults.set(self.room, forKey: "room")
+        defaults.set(self.speakerIP, forKey: "speakerIP")
         defaults.set(volumeStep, forKey: "volumeStep")
         stop()
         enable()
     }
 
-    func discoverRooms() {
+    func discoverRooms(speakerIP: String) {
         guard !discovering else { return }
         discovering = true
         discoveryError = nil
-        let sonos = Sonos(SonosSettings(room: room, volumeStep: volumeStep))
+        let sonos = Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)))
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             do {
                 let rooms = try sonos.roomNames()
@@ -80,7 +84,7 @@ final class AppModel: ObservableObject {
         error = nil
         permissionPage = nil
         let room = room
-        let keys = MediaKeys(Sonos(SonosSettings(room: room, volumeStep: volumeStep)), modifiers: modifiers)
+        let keys = MediaKeys(Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP)), modifiers: modifiers)
         keys.onDiscoveryError = { [weak self, weak keys] message in
             guard let self = self, let keys = keys, self.listener === keys else { return }
             self.error = message

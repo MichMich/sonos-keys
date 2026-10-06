@@ -35,7 +35,7 @@ See [the Homebrew tap](https://github.com/MichMich/homebrew-tap) for upgrades an
 
 - macOS 13 or later.
 - Xcode for builds.
-- Sonos speakers on the same local network.
+- Sonos speakers on the same local network, or reachable through the optional Speaker IP setting.
 
 The app uses SwiftUI and native macOS frameworks. It has no external dependencies, browser interface, or cloud account requirement.
 
@@ -67,6 +67,10 @@ Ad hoc builds can require new permission approval. Opening System Settings does 
 
 ## Settings
 
+- Manual is off by default. Turn it on to show Speaker IP and its explanation.
+- Enter any speaker's IPv4 address and click Refresh to load rooms without SSDP discovery.
+- With Manual off, the app uses automatic discovery. Save clears the stored address when Manual is off.
+- With Manual on, Save stores the address. Cancel leaves the saved address unchanged.
 - Choose a discovered Sonos room. Use Refresh to repeat discovery.
 - Drag the volume-step bar to select a step from 1 to 20.
 - Choose Command, Option, Control, Shift, Fn / Globe, Caps Lock, or a combination.
@@ -80,6 +84,10 @@ Settings use local macOS UserDefaults. No personal room configuration is include
 ## Local Sonos control
 
 SSDP discovery finds device descriptions and service endpoints. ZoneGroupTopology identifies visible rooms and the group coordinator.
+
+With Speaker IP set, the app reads that speaker's description and topology directly over HTTP on TCP port 1400.
+Your Mac must also reach the selected speaker and its group coordinator. VLAN routing and firewall rules must permit these connections.
+Use a DHCP reservation to keep the address stable. The setting accepts IPv4 addresses.
 
 Playback targets the coordinator. Volume and mute target the selected room directly. Volume uses RenderingControl SetRelativeVolume, including negative adjustments. It does not read and set absolute volume.
 

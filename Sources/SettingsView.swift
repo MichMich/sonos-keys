@@ -7,6 +7,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @State private var room = ""
+    @State private var speakerIP = ""
+    @State private var manual = false
     @State private var volumeStep = 2
     @State private var modifiers: NSEvent.ModifierFlags = .command
 
@@ -21,6 +23,7 @@ struct SettingsView: View {
 
     private var valid: Bool {
         !room.isEmpty && !modifiers.isEmpty && (1...20).contains(volumeStep)
+            && (!manual || !speakerIP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
     private var volumeBar: some View {
@@ -67,12 +70,25 @@ struct SettingsView: View {
                     HStack {
                         Text("Room").fontWeight(.medium)
                         Spacer()
+                        Toggle("Manual", isOn: $manual)
+                            .toggleStyle(.checkbox)
                         if model.discovering { ProgressView().controlSize(.small) }
-                        Button { model.discoverRooms() } label: {
+                        Button { model.discoverRooms(speakerIP: manual ? speakerIP : "") } label: {
                             Image(systemName: "arrow.clockwise")
                         }
                         .help("Refresh Sonos rooms")
-                        .disabled(model.discovering)
+                        .disabled(model.discovering || (manual && speakerIP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+                    }
+                    if manual {
+                        HStack {
+                            Text("Speaker IP")
+                            TextField("192.168.1.100", text: $speakerIP)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel("Speaker IP")
+                        }
+                        Text("Enter any Sonos speaker's IPv4 address, then click Refresh.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Picker("Sonos room", selection: $room) {
                         Text("Choose a room").tag("")
@@ -166,7 +182,7 @@ struct SettingsView: View {
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Save") {
-                    model.save(room: room, volumeStep: volumeStep, modifiers: modifiers)
+                    model.save(room: room, speakerIP: manual ? speakerIP : "", volumeStep: volumeStep, modifiers: modifiers)
                     if model.error == nil { close() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -181,10 +197,12 @@ struct SettingsView: View {
         }
         .onAppear {
             room = model.room
+            speakerIP = model.speakerIP
+            manual = !model.speakerIP.isEmpty
             volumeStep = model.volumeStep
             modifiers = model.modifiers
             model.refreshLoginStatus()
-            model.discoverRooms()
+            model.discoverRooms(speakerIP: speakerIP)
         }
     }
 }

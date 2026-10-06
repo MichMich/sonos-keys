@@ -15,6 +15,7 @@ enum SonosFeedback {
 struct SonosSettings {
     let room: String
     let volumeStep: Int
+    let speakerIP: String
 }
 
 struct Failure: LocalizedError {
@@ -78,6 +79,15 @@ final class Sonos {
     }
 
     private func discover() throws {
+        if !settings.speakerIP.isEmpty {
+            var address = in_addr()
+            guard inet_pton(AF_INET, settings.speakerIP, &address) == 1 else {
+                throw Failure(message: "Enter a valid IPv4 address for Speaker IP.")
+            }
+            let location = URL(string: "http://\(settings.speakerIP):1400/xml/device_description.xml")!
+            speakers = [try describe(location)]
+            return
+        }
         let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard fd >= 0 else { throw Failure(message: "Cannot open the SSDP socket.") }
         defer { close(fd) }
