@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check version tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Use a version tag such as v1.0.0.' >&2
+            exit 1
+          fi
+          git merge-base --is-ancestor HEAD origin/main
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Build universal app
+        run: |
+          set -euo pipefail
+          xcodebuild -project SonosKeys.xcodeproj -scheme SonosKeys \
+            -configuration Release -derivedDataPath build/DerivedData \
+            ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+          app='build/DerivedData/Build/Products/Release/Sonos Keys.app'
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$app/Contents/Info.plist"
+          lipo "$app/Contents/MacOS/SonosKeys" -verify_arch arm64 x86_64
+
+      - name: Sign app
+        env:
+          CERTIFICATE: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${CERTIFICATE:?Missing DEVELOPER_ID_CERTIFICATE_BASE64 secret}"
+          : "${CERTIFICATE_PASSWORD:?Missing DEVELOPER_ID_CERTIFICATE_PASSWORD secret}"
+          keychain="$RUNNER_TEMP/sonos-signing.keychain-db"
+          keychain_password=$(openssl rand -hex 32)
+          echo "::add-mask::$keychain_password"
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/sonos-identity.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/sonos-identity.p12" -k "$keychain" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" /Library/Keychains/System.keychain
+          identity=$(security find-identity -v -p codesigning "$keychain" | \
+            awk '/"Developer ID Application:/ {print $2}')
+          if [[ ! "$identity" =~ ^[A-F0-9]{40}$ ]]; then
+            echo 'The certificate must contain one valid Developer ID Application identity.' >&2
+            exit 1
+          fi
+          app='build/DerivedData/Build/Products/Release/Sonos Keys.app'
+          codesign --force --options runtime --timestamp --keychain "$keychain" --sign "$identity" "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+
+      - name: Notarize and staple app
+        env:
+          API_PRIVATE_KEY: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${API_PRIVATE_KEY:?Missing APPLE_API_PRIVATE_KEY secret}"
+          : "${API_KEY_ID:?Missing APPLE_API_KEY_ID secret}"
+          : "${API_ISSUER_ID:?Missing APPLE_API_ISSUER_ID secret}"
+          printf '%s' "$API_PRIVATE_KEY" > "$RUNNER_TEMP/sonos-notary.p8"
+          app='build/DerivedData/Build/Products/Release/Sonos Keys.app'
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$RUNNER_TEMP/sonos-notary.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/sonos-notary.zip" \
+            --key "$RUNNER_TEMP/sonos-notary.p8" --key-id "$API_KEY_ID" --issuer "$API_ISSUER_ID" \
+            --wait --timeout 30m --output-format json > "$RUNNER_TEMP/sonos-notary.json"
+          if ! jq -e '.status == "Accepted"' "$RUNNER_TEMP/sonos-notary.json" >/dev/null; then
+            jq '{id, status, message}' "$RUNNER_TEMP/sonos-notary.json"
+            exit 1
+          fi
+          xcrun stapler staple "$app"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose=2 "$app"
+          mkdir -p dist
+          archive="Sonos-Keys-v${VERSION}-macOS-universal.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/$archive"
+          (cd dist && shasum -a 256 "$archive" > "$archive.sha256")
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --verify-tag --generate-notes --title "Sonos Keys $VERSION"
+          fi
+
+      - name: Remove temporary credentials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/sonos-signing.keychain-db" 2>/dev/null || true
+          for file in sonos-identity.p12 sonos-notary.p8 sonos-notary.zip sonos-notary.json; do
+            if [[ -f "$RUNNER_TEMP/$file" ]]; then
+              unlink "$RUNNER_TEMP/$file"
+            fi
+          done

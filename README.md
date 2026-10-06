@@ -27,6 +27,9 @@ The app uses SwiftUI and native macOS frameworks. It has no external dependencie
 
 ## Build
 
+Version tags produce a signed and notarized app for Intel and Apple Silicon in [GitHub Releases](https://github.com/MichMich/sonos-keys/releases).
+See [Release setup](docs/releases.md) for the workflow and required secrets.
+
 Open SonosKeys.xcodeproj in Xcode. Select the SonosKeys scheme and My Mac, then press Command-R.
 
 The public project defaults to local ad hoc signing. For stable permission identity across builds, select your own Apple Development certificate and team in Signing & Capabilities. No certificate or private key is included.

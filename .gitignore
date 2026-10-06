@@ -11,5 +11,9 @@ xcuserdata/
 *.provisionprofile
 *.key
 *.pem
+*.p8
+*.cer
+*.certSigningRequest
 *.log
+dist/
 Signing.local.xcconfig
