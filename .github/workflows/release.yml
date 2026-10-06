@@ -123,6 +123,24 @@ jobs:
             gh release create "$TAG" dist/* --verify-tag --generate-notes --title "Sonos Keys $VERSION"
           fi
 
+      - name: Update Homebrew cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${GH_TOKEN:?Missing HOMEBREW_TAP_TOKEN secret}"
+          endpoint='repos/MichMich/homebrew-tap/contents/Casks/sonos-keys.rb'
+          gh api "$endpoint?ref=main" > "$RUNNER_TEMP/sonos-cask.json"
+          ruby scripts/homebrew-update.rb "$VERSION" \
+            "dist/Sonos-Keys-v${VERSION}-macOS-universal.zip" \
+            "$RUNNER_TEMP/sonos-cask.json" > "$RUNNER_TEMP/sonos-cask-update.json"
+          if [[ -s "$RUNNER_TEMP/sonos-cask-update.json" ]]; then
+            gh api --method PUT "$endpoint" --input "$RUNNER_TEMP/sonos-cask-update.json" >/dev/null
+            echo "Homebrew cask updated to $VERSION."
+          else
+            echo 'Homebrew cask already contains this release or a newer version.'
+          fi
+
       - name: Remove temporary credentials
         if: always()
         run: |

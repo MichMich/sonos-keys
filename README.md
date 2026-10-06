@@ -85,6 +85,11 @@ Settings use local macOS UserDefaults. No personal room configuration is include
 
 SSDP discovery finds device descriptions and service endpoints. ZoneGroupTopology identifies visible rooms and the group coordinator.
 
+If SSDP finds no usable speaker, Bonjour searches `_sonos._tcp` for up to 2.5 seconds.
+The app resolves advertised hosts and checks their Sonos device descriptions on HTTP port 1400.
+Manual IP skips both discovery methods. Devices without a Bonjour advertisement still need SSDP or Manual IP.
+Across VLANs, Bonjour requires an mDNS reflector or proxy. HTTP connections must also pass the firewall.
+
 With Speaker IP set, the app reads that speaker's description and topology directly over HTTP on TCP port 1400.
 Your Mac must also reach the selected speaker and its group coordinator. VLAN routing and firewall rules must permit these connections.
 Use a DHCP reservation to keep the address stable. The setting accepts IPv4 addresses.

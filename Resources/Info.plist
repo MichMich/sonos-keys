@@ -13,4 +13,5 @@
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSLocalNetworkUsageDescription</key><string>Sonos Keys discovers and controls your Sonos speakers on the local network.</string>
+<key>NSBonjourServices</key><array><string>_sonos._tcp</string></array>
 </dict></plist>

@@ -71,6 +71,9 @@ final class Sonos {
 
     private func describe(_ location: URL) throws -> Speaker {
         let xml = try XML.parse(request(location))
+        guard xml.value("deviceType") == "urn:schemas-upnp-org:device:ZonePlayer:1" else {
+            throw Failure(message: "The address returned no Sonos device description.")
+        }
         let services = xml.all("service").compactMap { element -> Service? in
             guard let url = URL(string: element.value("controlURL"), relativeTo: location)?.absoluteURL else { return nil }
             return Service(type: element.value("serviceType"), url: url)
@@ -88,6 +91,17 @@ final class Sonos {
             speakers = [try describe(location)]
             return
         }
+        let locations = (try? ssdpLocations()) ?? []
+        speakers = locations.compactMap { try? describe($0) }
+        if speakers.isEmpty {
+            speakers = BonjourDiscovery().locations().compactMap { try? describe($0) }
+        }
+        guard !speakers.isEmpty else {
+            throw Failure(message: "No Sonos speakers responded to SSDP or Bonjour. Check the network and firewall, or use Manual IP.")
+        }
+    }
+
+    private func ssdpLocations() throws -> Set<URL> {
         let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard fd >= 0 else { throw Failure(message: "Cannot open the SSDP socket.") }
         defer { close(fd) }
@@ -127,8 +141,7 @@ final class Sonos {
                 if let url = URL(string: line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)) { locations.insert(url) }
             }
         }
-        speakers = locations.compactMap { try? describe($0) }
-        guard !speakers.isEmpty else { throw Failure(message: "No Sonos speakers responded. Check the local network and firewall.") }
+        return locations
     }
 
     private func soap(_ speaker: Speaker, _ name: String, _ action: String, _ arguments: [(String, String)] = []) throws -> Element {
@@ -253,5 +266,40 @@ final class Sonos {
             invalidateCache()
             throw error
         }
+    }
+}
+
+private final class BonjourDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegate {
+    private let browser = NetServiceBrowser()
+    private var services: [NetService] = []
+    private var found = Set<URL>()
+
+    func locations() -> Set<URL> {
+        browser.delegate = self
+        browser.searchForServices(ofType: "_sonos._tcp.", inDomain: "local.")
+        let deadline = Date().addingTimeInterval(2.5)
+        while Date() < deadline {
+            if !RunLoop.current.run(mode: .default, before: deadline) { break }
+        }
+        browser.stop()
+        services.forEach { $0.stop() }
+        return found
+    }
+
+    func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) {
+        services.append(service)
+        service.delegate = self
+        service.resolve(withTimeout: 2)
+    }
+
+    func netServiceDidResolveAddress(_ sender: NetService) {
+        guard let host = sender.hostName else { return }
+        var url = URLComponents()
+        url.scheme = "http"
+        url.host = host
+        // Bonjour can advertise another API port. SOAP uses the device description on port 1400.
+        url.port = 1400
+        url.path = "/xml/device_description.xml"
+        if let location = url.url { found.insert(location) }
     }
 }

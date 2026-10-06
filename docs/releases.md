@@ -8,6 +8,8 @@ It sets the app version from the tag and the build number from the workflow run 
 It signs the app with Developer ID Application and the hardened runtime.
 It submits the app to Apple, checks acceptance, and staples the notarization ticket to the app.
 It publishes a ZIP and a SHA-256 checksum only after these checks pass.
+After publication, it updates the version and checksum in `MichMich/homebrew-tap`.
+An older release run cannot downgrade the cask. A repeated run with unchanged content does not create another commit.
 
 ## Repository secrets
 
@@ -20,11 +22,17 @@ Configure these secrets in GitHub Settings → Secrets and variables → Actions
 | `APPLE_API_PRIVATE_KEY` | The contents of the App Store Connect team API key `.p8` file. |
 | `APPLE_API_KEY_ID` | The API key ID. |
 | `APPLE_API_ISSUER_ID` | The API issuer ID. |
+| `HOMEBREW_TAP_TOKEN` | A fine-grained GitHub token for `MichMich/homebrew-tap`, with Contents read and write permission. |
 
 Use a dedicated team API key with the Developer role.
 Keep certificates, passwords, and private keys outside this repository.
 The workflow imports the certificate into a temporary keychain and removes temporary credentials after the job.
 GitHub also discards the hosted runner after the job.
+
+For the Homebrew token, select only `homebrew-tap` under repository access.
+Grant Contents read and write permission. Metadata read access is automatic.
+Store the token in the `sonos-keys` repository secret named `HOMEBREW_TAP_TOKEN`.
+Renew the token before its expiration date. Do not put the token in this repository or a chat.
 
 ## Publish a version
 
@@ -43,6 +51,7 @@ The app still needs Accessibility, Input Monitoring, and local network permissio
 If a run fails, fix the cause and retry the run when the tagged source needs no change.
 If the source needs a change, use a new version tag.
 A repeated successful run replaces the assets for that tag.
+If the Homebrew step fails, the app release remains available. Correct the token or cask issue, then retry the job.
 
 ## Decisions and follow-up
 
