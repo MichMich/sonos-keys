@@ -1,0 +1,15 @@
+.DS_Store
+build/
+xcuserdata/
+
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+*.key
+*.pem
+*.log
+Signing.local.xcconfig
