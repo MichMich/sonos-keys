@@ -17,6 +17,12 @@ Normal media keys still control your Mac. Hold your selected modifier keys to co
 
 The HUD appears below the menu bar icon. It shows confirmed results and a loading indicator for slow commands. Extra volume presses do not accumulate while a volume request is pending.
 
+## Download
+
+Download the app ZIP and its SHA-256 checksum from [GitHub Releases](https://github.com/MichMich/sonos-keys/releases).
+The signed and notarized app supports Intel and Apple Silicon.
+Extract the ZIP and copy Sonos Keys to Applications. Xcode is not required for the release download.
+
 ## Requirements
 
 - macOS 13 or later.
