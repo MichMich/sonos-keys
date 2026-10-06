@@ -107,6 +107,10 @@ Network work runs on a serial background queue. Failed commands are not retried 
 
 ## About and license
 
+The About window shows the app icon, version, copyright, and license in a centered layout.
+The Xonay Media button opens the website.
+
+
 © 2026 Michael Teeuw, [Xonay Media](https://xonaymedia.nl).
 
 Non-commercial use, modification, and redistribution are permitted with attribution and a copy of the license. Commercial use requires separate permission. See [LICENSE](LICENSE).

@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let menu = NSPopover()
     private var settingsWindow: NSWindow?
+    private var aboutWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -41,19 +42,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showAbout() {
         menu.close()
-        let credits = NSMutableAttributedString(
-            string: "Xonay Media",
-            attributes: [.link: URL(string: "https://xonaymedia.nl")!, .font: NSFont.systemFont(ofSize: 12)]
-        )
-        credits.append(NSAttributedString(
-            string: "\n\nFor non-commercial use only.",
-            attributes: [.font: NSFont.systemFont(ofSize: 12)]
-        ))
+        if aboutWindow == nil {
+            let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "About Sonos Keys"
+            window.isReleasedWhenClosed = false
+            let view = NSHostingView(rootView: AboutView())
+            window.contentView = view
+            window.setContentSize(view.fittingSize)
+            window.center()
+            aboutWindow = window
+        }
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationName: "Sonos Keys",
-            .credits: credits
-        ])
+        aboutWindow?.makeKeyAndOrderFront(nil)
     }
 
     private func showSettings() {
