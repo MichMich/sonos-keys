@@ -43,13 +43,16 @@ final class MediaKeys {
         let state = (native.data1 >> 8) & 0xff
         let repeated = native.data1 & 1 != 0
         guard let command = commands[code] else { return Unmanaged.passUnretained(event) }
+        let modifierHeld = native.modifierFlags.contains(requiredModifiers)
+        if inverted {
+            event.flags.subtract(CGEventFlags(rawValue: UInt64(requiredModifiers.rawValue)))
+        }
         if state == 0x0b {
             if consumed.remove(code) != nil { return nil }
             return Unmanaged.passUnretained(event)
         }
         guard state == 0x0a else { return Unmanaged.passUnretained(event) }
         if !repeated {
-            let modifierHeld = native.modifierFlags.contains(requiredModifiers)
             guard !requiredModifiers.isEmpty && (inverted ? !modifierHeld : modifierHeld) else { return Unmanaged.passUnretained(event) }
             consumed.insert(code)
         }
@@ -117,4 +120,3 @@ final class MediaKeys {
         consumed.removeAll()
     }
 }
-
