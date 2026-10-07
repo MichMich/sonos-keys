@@ -122,3 +122,15 @@ The loading delay leaves the menu open until the HUD actually appears.
 The local Release build and five isolated panel checks passed. No Sonos commands were sent by these checks.
 Next task: check this interaction with actual media keys on the signed release.
 No new technical debt was identified.
+
+## v0.4.6 checks
+
+Previous checks current transport actions. Seek and X_DLNA_SeekTime both permit a restart attempt.
+Restart confirmation requires the same track URI and a decreased position near zero.
+An accepted Seek response alone no longer reports success. Previous runs only when the source offers it.
+Unsupported sources show Previous unavailable. Next retains its existing command behavior.
+With HUD track info enabled, successful Next, Previous, and restart feedback stays visible for 3 seconds.
+Other feedback keeps its 1.5-second duration.
+The local Release build and 18 simulated SOAP checks passed.
+The checks covered action availability, seek aliases, accepted no-op, changed track, timing thresholds, and failures.
+Next task: check supported and unsupported sources on the signed release. No new technical debt was identified.

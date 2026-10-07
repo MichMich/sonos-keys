@@ -9,6 +9,7 @@ enum SonosFeedback {
     case paused
     case next
     case previous
+    case previousUnavailable
     case restarted
     case muted(Bool)
 }
@@ -290,25 +291,41 @@ final class Sonos {
                 }
                 _ = try soap(coordinator, "AVTransport", "Play", instance + [("Speed", "1")])
                 return .playing
-            case "next", "previous":
-                if command == "previous",
+            case "next":
+                _ = try soap(coordinator, "AVTransport", "Next", instance)
+                return .next
+            case "previous":
+                let actions = try soap(coordinator, "AVTransport", "GetCurrentTransportActions", instance)
+                    .value("Actions").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                if actions.contains("Seek") || actions.contains("X_DLNA_SeekTime"),
                    let position = try? soap(coordinator, "AVTransport", "GetPositionInfo", instance) {
-                    let fields = position.value("RelTime").split(separator: ":", omittingEmptySubsequences: false)
-                    let time = fields.compactMap { Int($0) }
-                    if fields.count == 3 && time.count == 3 && time.allSatisfy({ $0 >= 0 }) && time[1] < 60 && time[2] < 60,
-                       time[0] > 0 || time[1] > 0 || time[2] > 3,
-                       (try? soap(coordinator, "AVTransport", "Seek", instance + [("Unit", "REL_TIME"), ("Target", "00:00:00")])) != nil {
-                        return .restarted
+                    if let before = positionSeconds(position), before > 3 {
+                        let started = Date()
+                        if (try? soap(coordinator, "AVTransport", "Seek", instance + [("Unit", "REL_TIME"), ("Target", "00:00:00")])) != nil,
+                           let after = try? soap(coordinator, "AVTransport", "GetPositionInfo", instance),
+                           after.value("TrackURI") == position.value("TrackURI"),
+                           let seconds = positionSeconds(after), seconds < before,
+                           seconds <= max(3, Int(Date().timeIntervalSince(started)) + 1) {
+                            return .restarted
+                        }
                     }
                 }
-                _ = try soap(coordinator, "AVTransport", command == "next" ? "Next" : "Previous", instance)
-                return command == "next" ? .next : .previous
+                guard actions.contains("Previous") else { return .previousUnavailable }
+                _ = try soap(coordinator, "AVTransport", "Previous", instance)
+                return .previous
             default: throw Failure(message: "Unknown Sonos command: \(command)")
             }
         } catch {
             invalidateCache()
             throw error
         }
+    }
+
+    private func positionSeconds(_ position: Element) -> Int? {
+        let fields = position.value("RelTime").split(separator: ":", omittingEmptySubsequences: false)
+        let time = fields.compactMap { Int($0) }
+        guard fields.count == 3, time.count == 3, time.allSatisfy({ $0 >= 0 }), time[1] < 60, time[2] < 60 else { return nil }
+        return time[0] * 3600 + time[1] * 60 + time[2]
     }
 }
 

@@ -33,7 +33,10 @@ Both views share the same metadata cache. Requests run separately from media-key
 Turn both switches off to stop updates.
 
 Previous reads the position from the group coordinator. After more than 3 seconds, it seeks to the track start.
-If the position is unavailable or seeking fails, it sends Previous instead. The HUD shows Track restarted after a successful seek.
+The app checks the source's available actions before a restart or Previous command.
+The HUD shows Track restarted only after the position returns near zero on the same track.
+If restart fails, it sends Previous only when available. Otherwise the HUD shows Previous unavailable.
+With track info enabled in the HUD, Next, Previous, and restart results stay visible for 3 seconds.
 
 The HUD appears below the menu bar icon. It shows confirmed results and a loading indicator for slow commands. Extra volume presses do not accumulate while a volume request is pending.
 
