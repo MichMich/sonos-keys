@@ -7,7 +7,7 @@ struct ShortcutRoutingView: View {
     let inverted: Bool
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
             row(room, shortcut: inverted ? "Media Keys" : "\(modifier) + Media Keys")
             row(audioOutput, shortcut: inverted ? "\(modifier) + Media Keys" : "Media Keys")
         }
@@ -20,12 +20,12 @@ struct ShortcutRoutingView: View {
                 .font(.system(size: 12, weight: .medium))
                 .lineLimit(1)
                 .help(destination)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(shortcut)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
         }
     }

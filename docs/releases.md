@@ -106,3 +106,10 @@ ErrorView shares the media-key error message and recovery actions between menu a
 The local build and universal build passed. A menu preview returned MacBook Air Speakers from the current Mac.
 The shared-component artwork check fetched the unchanged cover once across eight feedback cycles.
 Next task: test Studio Display, output changes, and both shortcut modes on the signed release.
+
+## v0.4.4 checks
+
+Shortcut rows now use an 8-point column gap. The destination receives the remaining width after the shortcut.
+The local preview displayed MacBook Air Speakers in full. Longer names retain truncation and a tooltip.
+The universal build passed. The v0.4.3 workflow was cancelled before publication to include this layout change.
+Next task: check Studio Display and both shortcut modes on v0.4.4.
