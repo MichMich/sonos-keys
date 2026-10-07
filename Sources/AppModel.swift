@@ -27,6 +27,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var trackLoading = false
     @Published private(set) var trackError: String?
     @Published private(set) var audioOutputName = "Mac"
+    var closeMenu: (() -> Void)?
 
     var modifierTitle: String {
         MediaKeys.modifiers.filter { modifiers.contains($0.flag) }.map { $0.symbol }.joined(separator: " + ")
@@ -90,13 +91,17 @@ final class AppModel: ObservableObject {
 
     func setHUDVisible(_ visible: Bool) {
         guard hudVisible != visible else { return }
+        if visible { closeMenu?() }
         hudVisible = visible
         updateTrackPolling(refresh: visible && showTrackInfoInHUD)
     }
 
     func setMenuVisible(_ visible: Bool) {
         menuVisible = visible
-        if visible { refreshAudioOutputName() }
+        if visible {
+            hud.hide()
+            refreshAudioOutputName()
+        }
         updateTrackPolling(refresh: visible && showTrackInfoInMenu)
     }
 

@@ -113,3 +113,12 @@ Shortcut rows now use an 8-point column gap. The destination receives the remain
 The local preview displayed MacBook Air Speakers in full. Longer names retain truncation and a tooltip.
 The universal build passed. The v0.4.3 workflow was cancelled before publication to include this layout change.
 Next task: check Studio Display and both shortcut modes on v0.4.4.
+
+## v0.4.5 checks
+
+The HUD closes the click menu just before its panel appears.
+Opening the click menu hides the HUD and cancels a pending loading presentation or dismissal.
+The loading delay leaves the menu open until the HUD actually appears.
+The local Release build and five isolated panel checks passed. No Sonos commands were sent by these checks.
+Next task: check this interaction with actual media keys on the signed release.
+No new technical debt was identified.

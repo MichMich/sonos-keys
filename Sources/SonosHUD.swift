@@ -65,8 +65,8 @@ final class SonosHUD {
             panel.contentView = NSHostingView(rootView: view)
         }
         if !panel.isVisible { panel.alphaValue = 0 }
-        panel.orderFrontRegardless()
         onVisibilityChange?(true)
+        panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)

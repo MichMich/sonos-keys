@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         model.attachStatusButton(button)
         menu.behavior = .transient
         menu.delegate = self
+        model.closeMenu = { [weak self] in self?.menu.close() }
         menu.contentViewController = NSHostingController(rootView: MenuView(
             model: model,
             openSettings: { [weak self] in self?.showSettings() },
