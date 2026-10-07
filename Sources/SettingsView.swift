@@ -65,24 +65,20 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 20) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "hifispeaker.fill")
-                            .font(.largeTitle)
-                            .foregroundStyle(.tint)
+                    HStack(spacing: 14) {
+                        IconTile { Image(systemName: "hifispeaker.fill") }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Sonos Keys").font(.title2.weight(.semibold))
+                            Text("Sonos Keys").font(.system(size: 19, weight: .semibold))
                             Text("Your media keys, your Sonos room.")
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
                         }
                     }
 
-                    GroupBox {
+                    SettingsCard(title: "Sonos room", icon: "hifispeaker.fill") {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Text("Room").fontWeight(.medium)
-                                Spacer()
                                 Toggle("Manual", isOn: $manual)
-                                    .toggleStyle(.checkbox)
+                                    .toggleStyle(SettingsToggleStyle(checkbox: true))
                                 if model.discovering { ProgressView().controlSize(.small) }
                                 Button { model.discoverRooms(speakerIP: manual ? speakerIP : "") } label: {
                                     Image(systemName: "arrow.clockwise")
@@ -132,12 +128,11 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
-                        .padding(8)
                     }
 
-                    GroupBox {
+                    SettingsCard(title: "Media keys", icon: "keyboard") {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Modifier keys").fontWeight(.medium)
+                            Text("Modifier keys").font(.system(size: 12, weight: .medium))
                             Text(inverted
                                  ? "Hold all selected keys with a media key to control your Mac."
                                  : "Hold all selected keys with a media key to control Sonos.")
@@ -153,45 +148,48 @@ struct SettingsView: View {
                                             else if MediaKeys.modifiers.filter({ modifiers.contains($0.flag) }).count > 1 { modifiers.remove(key.flag) }
                                         }
                                     ))
-                                    .toggleStyle(.checkbox)
+                                    .toggleStyle(SettingsToggleStyle(checkbox: true))
                                 }
                             }
                             Divider()
                             Toggle("Control Sonos by default", isOn: $inverted)
-                                .toggleStyle(.switch)
-                            Text(inverted
-                                 ? "Media keys alone → Sonos\nSelected modifiers + media keys → Mac"
-                                 : "Media keys alone → Mac\nSelected modifiers + media keys → Sonos")
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .toggleStyle(SettingsToggleStyle())
+                            PanelSection(background: .black.opacity(0.08), padding: 12) {
+                                ShortcutRoutingView(room: room.isEmpty ? "Choose a room" : room,
+                                                    audioOutput: model.audioOutputName,
+                                                    modifier: model.modifierTitle, inverted: inverted)
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                             Text("Select at least one key. Caps Lock uses its on/off state. Fn depends on your keyboard.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
-                        .padding(8)
                     }
 
-                    GroupBox {
+                    SettingsCard(title: "Track info", icon: "music.note") {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Track info").fontWeight(.medium)
                             Toggle("Show in media-key HUD", isOn: Binding(
                                 get: { model.showTrackInfoInHUD },
                                 set: { model.setShowTrackInfo(inHUD: $0, inMenu: model.showTrackInfoInMenu) }
                             ))
-                            .toggleStyle(.switch)
+                            .toggleStyle(SettingsToggleStyle())
                             Toggle("Show in menu", isOn: Binding(
                                 get: { model.showTrackInfoInMenu },
                                 set: { model.setShowTrackInfo(inHUD: model.showTrackInfoInHUD, inMenu: $0) }
                             ))
-                            .toggleStyle(.switch)
+                            .toggleStyle(SettingsToggleStyle())
                             Text("Choose where to show the cover and track details. Turn both off to stop updates.")
                                 .font(.caption).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Divider()
+                        }
+                    }
+
+                    SettingsCard(title: "Startup", icon: "power") {
+                        VStack(alignment: .leading, spacing: 8) {
                             Toggle("Launch at login", isOn: Binding(
                                 get: { model.launchAtLogin },
                                 set: { model.setLaunchAtLogin($0) }
                             ))
-                            .toggleStyle(.switch)
+                            .toggleStyle(SettingsToggleStyle())
                             Text("Open Sonos Keys when you sign in to your Mac.")
                                 .font(.caption).foregroundStyle(.secondary)
                             if model.loginApprovalRequired {
@@ -202,7 +200,6 @@ struct SettingsView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(8)
                     }
 
                     if let error = model.error {
@@ -216,7 +213,7 @@ struct SettingsView: View {
                                 ]
                             )
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
                 }
                 .padding(24)
@@ -236,7 +233,7 @@ struct SettingsView: View {
         }
         .frame(width: 440, height: min(640, (NSScreen.main?.visibleFrame.height ?? 740) - 100))
         .onChange(of: scenePhase) { phase in
-            if phase == .active { model.refreshLoginStatus() }
+            if phase == .active { model.refreshLoginStatus(); model.refreshAudioOutputName() }
         }
         .onChange(of: room) { _ in applySettings() }
         .onChange(of: speakerIP) { _ in applySettings() }
@@ -252,6 +249,7 @@ struct SettingsView: View {
             modifiers = model.modifiers
             inverted = model.inverted
             model.refreshLoginStatus()
+            model.refreshAudioOutputName()
             loaded = true
             model.discoverRooms(speakerIP: speakerIP)
         }

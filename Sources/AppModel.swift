@@ -105,7 +105,7 @@ final class AppModel: ObservableObject {
         updateTrackPolling(refresh: visible && showTrackInfoInMenu)
     }
 
-    private func refreshAudioOutputName() {
+    func refreshAudioOutputName() {
         audioOutputName = "Mac"
         var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
                                                   mScope: kAudioObjectPropertyScopeGlobal,

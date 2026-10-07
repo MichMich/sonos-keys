@@ -154,3 +154,10 @@ The HUD does not take focus. It follows the status item, fades in and out, and u
 Check unmodified media-key behavior, modifier combinations, room discovery, grouped playback, volume, mute, all HUD states, permissions, and launch at login.
 
 Next task: build the About panel and check the website link, then check the unresolved startup layout warning.
+
+### Settings layout
+
+Settings use shared cards with right-aligned switches.
+Launch at login has its own card.
+The media-key card shows the selected room, Mac audio output, and key mappings.
+Changes apply immediately. The scroll area keeps the Close button visible.
