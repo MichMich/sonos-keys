@@ -37,12 +37,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func popoverWillShow(_ notification: Notification) { model.setMenuVisible(true) }
+    func popoverDidShow(_ notification: Notification) {
+        guard let window = menu.contentViewController?.view.window else { return }
+        window.level = .popUpMenu
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        window.makeKeyAndOrderFront(nil)
+    }
     func popoverDidClose(_ notification: Notification) { model.setMenuVisible(false) }
 
     @objc private func showMenu() {
         guard let button = statusItem.button else { return }
         if menu.isShown { menu.close() }
-        else { menu.show(relativeTo: button.bounds, of: button, preferredEdge: .minY) }
+        else {
+            NSApp.activate(ignoringOtherApps: true)
+            menu.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
     }
 
     private func showAbout() {

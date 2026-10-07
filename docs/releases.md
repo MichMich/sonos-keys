@@ -134,3 +134,13 @@ Other feedback keeps its 1.5-second duration.
 The local Release build and 18 simulated SOAP checks passed.
 The checks covered action availability, seek aliases, accepted no-op, changed track, timing thresholds, and failures.
 Next task: check supported and unsupported sources on the signed release. No new technical debt was identified.
+
+## v0.4.7 checks
+
+Opening the click menu activates the app and makes the native popover window key.
+The popover uses pop-up menu level and stationary behavior with full-screen Spaces support.
+Its transient behavior retains dismissal outside the menu.
+The local Release build passed. An isolated popover check reported active=true, key=true, level=101, and stationary=true.
+Desktop-click behavior still needs a manual check because the desktop accessibility action was unavailable during validation.
+Next task: check the switch color, desktop clicks, Mission Control, and outside dismissal on the signed release.
+No new technical debt was identified.
