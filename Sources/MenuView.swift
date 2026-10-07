@@ -45,38 +45,7 @@ struct MenuView: View {
             .padding(18)
 
             if model.showTrackInfoInMenu && model.menuVisible {
-                HStack(spacing: 14) {
-                    AsyncImage(url: model.track?.artworkURL) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        ZStack {
-                            Color.secondary.opacity(0.1)
-                            Image(systemName: "music.note").foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(width: 46, height: 46)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    VStack(alignment: .leading, spacing: 3) {
-                        if let track = model.track {
-                            Text(track.title.isEmpty ? "Unknown title" : track.title)
-                                .font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                            if !track.artist.isEmpty {
-                                Text(track.artist).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
-                            }
-                        } else {
-                            Text(model.trackError ?? (model.trackLoading ? "Loading track info…" : "No track information"))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: 82)
-                .background(Color.black.opacity(0.2))
-                .overlay(alignment: .top) {
-                    Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
-                }
+                TrackInfoView(track: model.track, emptyText: model.trackError ?? (model.trackLoading ? "Loading track info…" : "No track information"))
             }
 
             if let error = model.error {
@@ -96,13 +65,10 @@ struct MenuView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     if model.permissionPage != nil {
-                        VStack(spacing: 0) {
-                            actionRow("Privacy Settings", icon: "lock.shield", action: model.openPermissionSettings)
-                            Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
-                            actionRow("Retry media keys", icon: "arrow.clockwise", action: model.retryMediaKeys)
-                        }
-                        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        ActionGroup(actions: [
+                            .init(title: "Privacy Settings", icon: "lock.shield", perform: model.openPermissionSettings),
+                            .init(title: "Retry media keys", icon: "arrow.clockwise", perform: model.retryMediaKeys)
+                        ])
                     }
                 }
                 .padding(18)
@@ -113,15 +79,11 @@ struct MenuView: View {
                 }
             }
 
-            VStack(spacing: 0) {
-                actionRow("Settings", icon: "gearshape.fill", action: openSettings)
-                Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
-                actionRow("About", icon: "info.circle.fill", action: openAbout)
-                Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
-                actionRow("Quit", icon: "power", action: model.quit)
-            }
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            ActionGroup(actions: [
+                .init(title: "Settings", icon: "gearshape.fill", perform: openSettings),
+                .init(title: "About", icon: "info.circle.fill", perform: openAbout),
+                .init(title: "Quit", icon: "power", perform: model.quit)
+            ])
             .padding(18)
             .overlay(alignment: .top) {
                 Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
@@ -130,20 +92,4 @@ struct MenuView: View {
         .frame(width: 300)
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
-
-    private func actionRow(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon).foregroundStyle(Color.accentColor).frame(width: 18)
-                Text(title)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-            }
-            .font(.system(size: 12, weight: .medium))
-            .padding(12)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
 }

@@ -84,3 +84,13 @@ The HUD now reuses its hosting view so the unchanged cover stays loaded across f
 The local Release build passed. Eight loading/result cycles fetched the same cover once with HTTP caching disabled.
 The check used a local image server and changed no speaker playback or volume.
 Next task: check repeated volume commands and a track change on the signed release.
+
+## v0.4.2 checks
+
+TrackInfoView owns the cover, metadata, placeholder, spacing, and background for both HUD and menu.
+ActionGroup owns button rows, icons, separators, and the rounded group background for menu and permission actions.
+The screens supply track data, empty-state text, and actions. Existing behavior stays the same.
+Both new source files are included in the Xcode target. Public signing settings stay unchanged.
+Local and universal builds passed. A visual preview checked both action groups.
+Eight loading/result cycles still fetched the unchanged cover only once with HTTP caching disabled.
+Next task: check the signed patch release with normal media controls. No new technical debt was identified.
