@@ -76,3 +76,11 @@ and [GitHub certificate setup](https://docs.github.com/en/actions/how-tos/deploy
 - The public checkout build encountered Finder metadata at signing. The universal validation build uses a temporary directory without signing.
 - Follow-up: check live polling, both track switches, media keys, and popover placement at the screen edge on the signed release.
 - Open validation: the native menu arrow color and extreme screen-edge placement still need a visual check on the release.
+
+## v0.4.1 checks
+
+Volume feedback replaced the HUD hosting view and briefly showed the artwork placeholder.
+The HUD now reuses its hosting view so the unchanged cover stays loaded across feedback updates.
+The local Release build passed. Eight loading/result cycles fetched the same cover once with HTTP caching disabled.
+The check used a local image server and changed no speaker playback or volume.
+Next task: check repeated volume commands and a track change on the signed release.

@@ -58,7 +58,12 @@ final class SonosHUD {
         let targetFrame = NSRect(x: x, y: anchor.minY - height - 4, width: 300, height: height)
         let visible = panel.isVisible
         if !visible { panel.setFrame(targetFrame, display: false) }
-        panel.contentView = NSHostingView(rootView: HUDView(room: room, feedback: feedback, arrowX: arrowX, trackInfo: trackInfo))
+        let view = HUDView(room: room, feedback: feedback, arrowX: arrowX, trackInfo: trackInfo)
+        if let hostingView = panel.contentView as? NSHostingView<HUDView> {
+            hostingView.rootView = view
+        } else {
+            panel.contentView = NSHostingView(rootView: view)
+        }
         if !panel.isVisible { panel.alphaValue = 0 }
         panel.orderFrontRegardless()
         onVisibilityChange?(true)
