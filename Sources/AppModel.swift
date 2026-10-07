@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import ServiceManagement
+import CoreAudio
 
 final class AppModel: ObservableObject {
     @Published private(set) var enabled = false
@@ -25,6 +26,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var track: SonosTrack? { didSet { hud.trackInfo.track = track } }
     @Published private(set) var trackLoading = false
     @Published private(set) var trackError: String?
+    @Published private(set) var audioOutputName = "Mac"
 
     var modifierTitle: String {
         MediaKeys.modifiers.filter { modifiers.contains($0.flag) }.map { $0.symbol }.joined(separator: " + ")
@@ -94,7 +96,24 @@ final class AppModel: ObservableObject {
 
     func setMenuVisible(_ visible: Bool) {
         menuVisible = visible
+        if visible { refreshAudioOutputName() }
         updateTrackPolling(refresh: visible && showTrackInfoInMenu)
+    }
+
+    private func refreshAudioOutputName() {
+        audioOutputName = "Mac"
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+                                                  mScope: kAudioObjectPropertyScopeGlobal,
+                                                  mElement: kAudioObjectPropertyElementMain)
+        var device = AudioDeviceID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &device) == noErr,
+              device != kAudioObjectUnknown else { return }
+        address.mSelector = kAudioObjectPropertyName
+        var name: CFString = "" as CFString
+        size = UInt32(MemoryLayout<CFString>.size)
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &name) == noErr else { return }
+        if !(name as String).isEmpty { audioOutputName = name as String }
     }
 
     private func updateTrackPolling(refresh: Bool = true) {

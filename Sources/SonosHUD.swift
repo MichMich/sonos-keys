@@ -138,43 +138,39 @@ private struct HUDView: View {
     var body: some View {
         let content = presentation
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.accentColor.opacity(0.12))
-                        if case .loading = feedback {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Image(systemName: content.symbol)
-                                .font(.system(size: 22, weight: .medium))
-                                .foregroundStyle(Color.accentColor)
+            PanelSection {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 14) {
+                        IconTile {
+                            if case .loading = feedback {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: content.symbol)
+                            }
                         }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(room)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Text(content.title)
+                                .font(.system(size: 19, weight: .semibold))
+                                .monospacedDigit()
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .frame(width: 46, height: 46)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(room)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Text(content.title)
-                            .font(.system(size: 19, weight: .semibold))
-                            .monospacedDigit()
-                            .lineLimit(1)
+                    if hasVolumeBar {
+                        GeometryReader { geometry in
+                            Capsule().fill(Color.primary.opacity(0.1))
+                            Capsule().fill(Color.accentColor)
+                                .frame(width: geometry.size.width * CGFloat(min(100, max(0, content.volume ?? 0))) / 100)
+                        }
+                        .frame(height: 5)
+                        .opacity(content.volume == nil ? 0 : 1)
                     }
-                    Spacer(minLength: 0)
-                }
-                if hasVolumeBar {
-                    GeometryReader { geometry in
-                        Capsule().fill(Color.primary.opacity(0.1))
-                        Capsule().fill(Color.accentColor)
-                            .frame(width: geometry.size.width * CGFloat(min(100, max(0, content.volume ?? 0))) / 100)
-                    }
-                    .frame(height: 5)
-                    .opacity(content.volume == nil ? 0 : 1)
                 }
             }
-            .padding(18)
             .frame(height: hasVolumeBar ? 110 : 84)
             if trackInfo.enabled {
                 TrackInfoView(track: trackInfo.track)

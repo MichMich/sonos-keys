@@ -94,3 +94,15 @@ Both new source files are included in the Xcode target. Public signing settings 
 Local and universal builds passed. A visual preview checked both action groups.
 Eight loading/result cycles still fetched the unchanged cover only once with HTTP caching disabled.
 Next task: check the signed patch release with normal media controls. No new technical debt was identified.
+
+## v0.4.3 checks
+
+The menu lists the selected Sonos room and the default Mac audio output beside their media-key shortcuts.
+The shortcut mapping follows inverted mode and the selected modifiers.
+Core Audio reads the current output name each time the menu opens. Failed lookups use Mac.
+Destination names use one line with a full-name tooltip. The rows use a separate PanelSection.
+PanelSection shares section backgrounds, padding, and top separators. IconTile shares icon frames and loading content.
+ErrorView shares the media-key error message and recovery actions between menu and settings.
+The local build and universal build passed. A menu preview returned MacBook Air Speakers from the current Mac.
+The shared-component artwork check fetched the unchanged cover once across eight feedback cycles.
+Next task: test Studio Display, output changes, and both shortcut modes on the signed release.

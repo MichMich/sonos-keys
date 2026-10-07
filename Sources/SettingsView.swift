@@ -206,13 +206,17 @@ struct SettingsView: View {
                     }
 
                     if let error = model.error {
-                        Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled)
-                        if model.permissionPage != nil {
-                            HStack {
-                                Button("Open Privacy Settings…") { model.openPermissionSettings() }
-                                Button("Retry media keys") { model.retryMediaKeys() }
-                            }
+                        PanelSection(background: .orange.opacity(0.05)) {
+                            ErrorView(
+                                title: model.permissionPage == nil ? "Sonos Keys needs attention" : "Allow media-key access",
+                                message: error,
+                                actions: model.permissionPage == nil ? [] : [
+                                    .init(title: "Privacy Settings", icon: "lock.shield", perform: model.openPermissionSettings),
+                                    .init(title: "Retry media keys", icon: "arrow.clockwise", perform: model.retryMediaKeys)
+                                ]
+                            )
                         }
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
                 .padding(24)

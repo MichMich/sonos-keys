@@ -20,7 +20,9 @@ The setting starts off. Changes apply immediately. Close dismisses the settings 
 | Mute | Toggle room mute |
 
 The menu flyout uses the native macOS popover material with transparency and background blur.
-It has grouped actions and a separate error section. Settings scroll within a compact window.
+It has grouped actions and a separate error section.
+A separate section lists the selected Sonos room and current Mac audio output beside their shortcuts.
+The output name refreshes when the menu opens. Long names use a tooltip. Settings scroll within a compact window.
 
 ## Track info
 
