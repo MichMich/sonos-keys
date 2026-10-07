@@ -19,6 +19,13 @@ struct SonosSettings {
     let speakerIP: String
 }
 
+struct SonosTrack {
+    let title: String
+    let artist: String
+    let album: String
+    let artworkURL: URL?
+}
+
 struct Failure: LocalizedError {
     let message: String
     var errorDescription: String? { message }
@@ -227,6 +234,31 @@ final class Sonos {
         let coordinator = try speaker(coordinatorMember)
         selectedRoom = room
         return (room, coordinator)
+    }
+
+    func currentTrack() throws -> SonosTrack? {
+        let (_, coordinator) = try target()
+        let position = try soap(coordinator, "AVTransport", "GetPositionInfo", [("InstanceID", "0")])
+        let metadata = position.value("TrackMetaData")
+        guard !metadata.isEmpty && metadata != "NOT_IMPLEMENTED" else { return nil }
+        let track = try XML.parse(Data(metadata.utf8))
+        var title = track.value("title")
+        var artist = track.value("creator").isEmpty ? track.value("artist") : track.value("creator")
+        let album = track.value("album")
+        var artwork = track.value("albumArtURI")
+        if artist.isEmpty && album.isEmpty,
+           let media = try? soap(coordinator, "AVTransport", "GetMediaInfo", [("InstanceID", "0")]),
+           let station = try? XML.parse(Data(media.value("CurrentURIMetaData").utf8)),
+           !station.value("title").isEmpty {
+            let stream = track.value("streamContent")
+            title = stream.isEmpty ? station.value("title") : stream
+            if !stream.isEmpty { artist = station.value("title") }
+            if artwork.isEmpty { artwork = station.value("albumArtURI") }
+        }
+        guard !title.isEmpty || !artist.isEmpty || !album.isEmpty else { return nil }
+        let url = artwork.isEmpty ? nil : URL(string: artwork, relativeTo: coordinator.location)?.absoluteURL
+        return SonosTrack(title: title, artist: artist, album: album,
+                          artworkURL: url?.scheme == "http" || url?.scheme == "https" ? url : nil)
     }
 
     func perform(_ command: String) throws -> SonosFeedback {

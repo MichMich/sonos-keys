@@ -64,3 +64,15 @@ If the Homebrew step fails, the app release remains available. Correct the token
 
 See [Apple notarization](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow)
 and [GitHub certificate setup](https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications).
+
+## v0.4.0 checks
+
+- Track info uses local Sonos metadata and separate switches for the HUD and menu. Both start off.
+- Both views share a metadata cache. Refresh uses 15 seconds in the background and 5 seconds while visible.
+- The click menu uses the native popover background for its body and arrow.
+- Settings use a scroll area with a fixed Close footer. Menu actions use grouped vertical rows.
+- Six simulated metadata checks passed for music, radio, missing metadata, and cover URLs.
+- Local previews checked the HUD, grouped actions, error section, and settings scrollbar.
+- The public checkout build encountered Finder metadata at signing. The universal validation build uses a temporary directory without signing.
+- Follow-up: check live polling, both track switches, media keys, and popover placement at the screen edge on the signed release.
+- Open validation: the native menu arrow color and extreme screen-edge placement still need a visual check on the release.

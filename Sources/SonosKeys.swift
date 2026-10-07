@@ -12,7 +12,7 @@ struct SonosKeysApp: App {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let model = AppModel()
     private var statusItem: NSStatusItem!
     private let menu = NSPopover()
@@ -27,12 +27,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.action = #selector(showMenu)
         model.attachStatusButton(button)
         menu.behavior = .transient
+        menu.delegate = self
         menu.contentViewController = NSHostingController(rootView: MenuView(
             model: model,
             openSettings: { [weak self] in self?.showSettings() },
             openAbout: { [weak self] in self?.showAbout() }
         ))
     }
+
+    func popoverWillShow(_ notification: Notification) { model.setMenuVisible(true) }
+    func popoverDidClose(_ notification: Notification) { model.setMenuVisible(false) }
 
     @objc private func showMenu() {
         guard let button = statusItem.button else { return }

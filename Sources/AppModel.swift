@@ -17,6 +17,14 @@ final class AppModel: ObservableObject {
     @Published private(set) var launchAtLogin = false
     @Published private(set) var loginApprovalRequired = false
     @Published private(set) var loginError: String?
+    @Published private(set) var showTrackInfoInHUD: Bool { didSet { hud.trackInfo.enabled = showTrackInfoInHUD } }
+    @Published private(set) var showTrackInfoInMenu: Bool
+    var showTrackInfo: Bool { showTrackInfoInHUD || showTrackInfoInMenu }
+    @Published private(set) var hudVisible = false
+    @Published private(set) var menuVisible = false
+    @Published private(set) var track: SonosTrack? { didSet { hud.trackInfo.track = track } }
+    @Published private(set) var trackLoading = false
+    @Published private(set) var trackError: String?
 
     var modifierTitle: String {
         MediaKeys.modifiers.filter { modifiers.contains($0.flag) }.map { $0.symbol }.joined(separator: " + ")
@@ -26,6 +34,9 @@ final class AppModel: ObservableObject {
     private let hud = SonosHUD()
     private var listener: MediaKeys?
     private var pendingCommands = 0
+    private var trackTimer: Timer?
+    private var trackClient: Sonos?
+    private let trackWorker = DispatchQueue(label: "sonos-keys.track-info")
 
     init() {
         room = defaults.string(forKey: "room") ?? ""
@@ -33,7 +44,12 @@ final class AppModel: ObservableObject {
         volumeStep = min(20, max(1, defaults.object(forKey: "volumeStep") as? Int ?? 2))
         modifiers = NSEvent.ModifierFlags(rawValue: UInt(defaults.object(forKey: "modifiers") as? Int ?? Int(NSEvent.ModifierFlags.command.rawValue)))
         inverted = defaults.bool(forKey: "inverted")
+        showTrackInfoInHUD = defaults.object(forKey: "showTrackInfoInHUD") as? Bool ?? false
+        showTrackInfoInMenu = defaults.object(forKey: "showTrackInfoInMenu") as? Bool ?? false
+        hud.trackInfo.enabled = showTrackInfoInHUD
+        hud.onVisibilityChange = { [weak self] visible in self?.setHUDVisible(visible) }
         refreshLoginStatus()
+        updateTrackPolling()
         if !room.isEmpty && defaults.object(forKey: "enabled") as? Bool != false {
             DispatchQueue.main.async { [weak self] in self?.enable() }
         }
@@ -53,8 +69,68 @@ final class AppModel: ObservableObject {
         defaults.set(self.room, forKey: "room")
         defaults.set(self.speakerIP, forKey: "speakerIP")
         defaults.set(volumeStep, forKey: "volumeStep")
+        trackClient = nil
+        track = nil
+        trackLoading = false
+        updateTrackPolling()
         stop()
         enable()
+    }
+
+    func setShowTrackInfo(inHUD: Bool, inMenu: Bool) {
+        showTrackInfoInHUD = inHUD
+        showTrackInfoInMenu = inMenu
+        defaults.set(inHUD, forKey: "showTrackInfoInHUD")
+        defaults.set(inMenu, forKey: "showTrackInfoInMenu")
+        if !showTrackInfo { track = nil }
+        updateTrackPolling()
+    }
+
+    func setHUDVisible(_ visible: Bool) {
+        guard hudVisible != visible else { return }
+        hudVisible = visible
+        updateTrackPolling(refresh: visible && showTrackInfoInHUD)
+    }
+
+    func setMenuVisible(_ visible: Bool) {
+        menuVisible = visible
+        updateTrackPolling(refresh: visible && showTrackInfoInMenu)
+    }
+
+    private func updateTrackPolling(refresh: Bool = true) {
+        trackTimer?.invalidate()
+        trackTimer = nil
+        guard showTrackInfo && !room.isEmpty else { return }
+        if refresh { refreshTrack() }
+        let timer = Timer(timeInterval: (hudVisible && showTrackInfoInHUD) || (menuVisible && showTrackInfoInMenu) ? 5 : 15, repeats: true) { [weak self] _ in self?.refreshTrack() }
+        RunLoop.main.add(timer, forMode: .common)
+        trackTimer = timer
+    }
+
+    private func refreshTrack() {
+        guard !trackLoading else { return }
+        if trackClient == nil {
+            trackClient = Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP))
+        }
+        guard let client = trackClient else { return }
+        trackLoading = true
+        trackWorker.async { [weak self] in
+            let result = Result { try client.currentTrack() }
+            DispatchQueue.main.async {
+                guard let self = self, self.trackClient === client else { return }
+                self.trackLoading = false
+                guard self.showTrackInfo else { return }
+                switch result {
+                case .success(let track):
+                    self.track = track
+                    self.trackError = nil
+                case .failure:
+                    self.track = nil
+                    self.trackError = "Track info unavailable"
+                    self.trackClient = nil
+                }
+            }
+        }
     }
 
     func discoverRooms(speakerIP: String) {
@@ -105,6 +181,12 @@ final class AppModel: ObservableObject {
             guard let self = self, let keys = keys, self.listener === keys else { return }
             self.pendingCommands -= 1
             self.error = nil
+            if self.showTrackInfo {
+                switch feedback {
+                case .next, .previous, .restarted: self.refreshTrack()
+                default: break
+                }
+            }
             if self.pendingCommands == 0 { self.hud.show(room: room, feedback: feedback) }
         }
         keys.onError = { [weak self, weak keys] message in

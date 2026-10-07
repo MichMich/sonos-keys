@@ -8,6 +8,8 @@ final class SonosHUD {
     private var loading: DispatchWorkItem?
     private var generation = 0
     var anchorRect: (() -> NSRect?)?
+    var onVisibilityChange: ((Bool) -> Void)?
+    let trackInfo = HUDTrackInfo()
 
     func show(room: String, feedback: SonosFeedback) {
         loading?.cancel()
@@ -28,12 +30,13 @@ final class SonosHUD {
 
     private func present(room: String, feedback: SonosFeedback, generation currentGeneration: Int) {
         guard let anchor = anchorRect?() else { return }
-        let height: CGFloat
+        var height: CGFloat
         switch feedback {
         case .volume: height = 120
         case .loading(let volume): height = volume ? 120 : 94
         default: height = 94
         }
+        if trackInfo.enabled { height += 82 }
 
         if panel == nil {
             let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -55,9 +58,10 @@ final class SonosHUD {
         let targetFrame = NSRect(x: x, y: anchor.minY - height - 4, width: 300, height: height)
         let visible = panel.isVisible
         if !visible { panel.setFrame(targetFrame, display: false) }
-        panel.contentView = NSHostingView(rootView: HUDView(room: room, feedback: feedback, arrowX: arrowX))
+        panel.contentView = NSHostingView(rootView: HUDView(room: room, feedback: feedback, arrowX: arrowX, trackInfo: trackInfo))
         if !panel.isVisible { panel.alphaValue = 0 }
         panel.orderFrontRegardless()
+        onVisibilityChange?(true)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -73,7 +77,10 @@ final class SonosHUD {
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                 panel.animator().alphaValue = 0
             }, completionHandler: { [weak self, weak panel] in
-                if self?.generation == currentGeneration { panel?.orderOut(nil) }
+                if self?.generation == currentGeneration {
+                    panel?.orderOut(nil)
+                    self?.onVisibilityChange?(false)
+                }
             })
         }
         self.dismissal = dismissal
@@ -84,13 +91,20 @@ final class SonosHUD {
         loading?.cancel()
         dismissal?.cancel()
         panel?.orderOut(nil)
+        onVisibilityChange?(false)
     }
+}
+
+final class HUDTrackInfo: ObservableObject {
+    @Published var enabled = false
+    @Published var track: SonosTrack?
 }
 
 private struct HUDView: View {
     let room: String
     let feedback: SonosFeedback
     let arrowX: CGFloat
+    @ObservedObject var trackInfo: HUDTrackInfo
 
     private var hasVolumeBar: Bool {
         switch feedback {
@@ -118,46 +132,83 @@ private struct HUDView: View {
 
     var body: some View {
         let content = presentation
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.accentColor.opacity(0.12))
-                    if case .loading = feedback {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: content.symbol)
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.accentColor)
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.accentColor.opacity(0.12))
+                        if case .loading = feedback {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: content.symbol)
+                                .font(.system(size: 22, weight: .medium))
+                                .foregroundStyle(Color.accentColor)
+                        }
                     }
+                    .frame(width: 46, height: 46)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(room)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Text(content.title)
+                            .font(.system(size: 19, weight: .semibold))
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
                 }
-                .frame(width: 46, height: 46)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(room)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Text(content.title)
-                        .font(.system(size: 19, weight: .semibold))
-                        .monospacedDigit()
-                        .lineLimit(1)
+                if hasVolumeBar {
+                    GeometryReader { geometry in
+                        Capsule().fill(Color.primary.opacity(0.1))
+                        Capsule().fill(Color.accentColor)
+                            .frame(width: geometry.size.width * CGFloat(min(100, max(0, content.volume ?? 0))) / 100)
+                    }
+                    .frame(height: 5)
+                    .opacity(content.volume == nil ? 0 : 1)
                 }
-                Spacer(minLength: 0)
             }
-            if hasVolumeBar {
-                GeometryReader { geometry in
-                    Capsule().fill(Color.primary.opacity(0.1))
-                    Capsule().fill(Color.accentColor)
-                        .frame(width: geometry.size.width * CGFloat(min(100, max(0, content.volume ?? 0))) / 100)
+            .padding(18)
+            .frame(height: hasVolumeBar ? 110 : 84)
+            if trackInfo.enabled {
+                HStack(spacing: 14) {
+                    AsyncImage(url: trackInfo.track?.artworkURL) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ZStack {
+                            Color.secondary.opacity(0.1)
+                            Image(systemName: "music.note").foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(width: 46, height: 46)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let track = trackInfo.track {
+                            Text(track.title.isEmpty ? "Unknown title" : track.title)
+                                .font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                            if !track.artist.isEmpty {
+                                Text(track.artist).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                        } else {
+                            Text("No track information")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(height: 5)
-                .opacity(content.volume == nil ? 0 : 1)
+                .padding(18)
+                .frame(height: 82)
+                .background(Color.black.opacity(0.2))
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
+                }
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.top, 10)
         .background(.regularMaterial, in: HUDShape(arrowX: arrowX))
+        .clipShape(HUDShape(arrowX: arrowX))
         .overlay {
             HUDShape(arrowX: arrowX)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)

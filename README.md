@@ -20,6 +20,15 @@ The setting starts off. Changes apply immediately. Close dismisses the settings 
 | Mute | Toggle room mute |
 
 The menu flyout uses the native macOS popover material with transparency and background blur.
+It has grouped actions and a separate error section. Settings scroll within a compact window.
+
+## Track info
+
+Settings has separate switches for track info in the media-key HUD and the click menu. Both start off.
+When enabled, the app shows the cover, title, and artist when Sonos provides them. Radio uses station details when available.
+Track info refreshes every 15 seconds in the background, immediately when its view opens, and every 5 seconds while visible.
+Both views share the same metadata cache. Requests run separately from media-key commands.
+Turn both switches off to stop updates.
 
 Previous reads the position from the group coordinator. After more than 3 seconds, it seeks to the track start.
 If the position is unavailable or seeking fails, it sends Previous instead. The HUD shows Track restarted after a successful seek.
