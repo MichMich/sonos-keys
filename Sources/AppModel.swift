@@ -43,6 +43,7 @@ final class AppModel: ObservableObject {
     private var pendingCommands = 0
     private var trackTimer: Timer?
     private var trackClient: Sonos?
+    private var trackRefreshPending = false
     private let trackWorker = DispatchQueue(label: "sonos-keys.track-info")
     private var controlsClient: Sonos?
     private var controlsTimer: Timer?
@@ -70,30 +71,39 @@ final class AppModel: ObservableObject {
     }
 
     func save(room: String, speakerIP: String, volumeStep: Int, modifiers: NSEvent.ModifierFlags, inverted: Bool) {
-        guard self.room != room.trimmingCharacters(in: .whitespacesAndNewlines)
-            || self.speakerIP != speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)
+        let room = room.trimmingCharacters(in: .whitespacesAndNewlines)
+        let speakerIP = speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)
+        let roomChanged = self.room != room || self.speakerIP != speakerIP
+        let enableFirstRoom = self.room.isEmpty && !room.isEmpty && defaults.object(forKey: "enabled") as? Bool != false
+        let wasEnabled = enabled
+        guard roomChanged
             || self.volumeStep != volumeStep || self.modifiers != modifiers || self.inverted != inverted else { return }
         self.inverted = inverted
         defaults.set(inverted, forKey: "inverted")
         self.modifiers = modifiers
         defaults.set(Int(modifiers.rawValue), forKey: "modifiers")
-        self.room = room.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.speakerIP = speakerIP.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.room = room
+        self.speakerIP = speakerIP
         self.volumeStep = volumeStep
         defaults.set(self.room, forKey: "room")
         defaults.set(self.speakerIP, forKey: "speakerIP")
         defaults.set(volumeStep, forKey: "volumeStep")
-        trackClient = nil
-        controlsClient = nil
-        controls = nil
-        controlsLoading = false
-        controlsBusy = false
-        track = nil
-        trackLoading = false
-        updateTrackPolling()
-        if menuVisible { refreshControls() }
-        stop()
-        enable()
+        if roomChanged {
+            trackClient = nil
+            controlsClient = nil
+            controls = nil
+            controlsLoading = false
+            controlsBusy = false
+            track = nil
+            trackLoading = false
+            trackRefreshPending = false
+            updateTrackPolling()
+            if menuVisible { refreshControls() }
+            stop()
+            if wasEnabled || enableFirstRoom { enable() }
+        } else {
+            listener?.update(modifiers: modifiers, inverted: inverted, volumeStep: volumeStep)
+        }
     }
 
     func setShowTrackInfo(inHUD: Bool, inMenu: Bool) {
@@ -101,7 +111,10 @@ final class AppModel: ObservableObject {
         showTrackInfoInMenu = inMenu
         defaults.set(inHUD, forKey: "showTrackInfoInHUD")
         defaults.set(inMenu, forKey: "showTrackInfoInMenu")
-        if !showTrackInfo { track = nil }
+        if !showTrackInfo {
+            track = nil
+            trackRefreshPending = false
+        }
         updateTrackPolling()
     }
 
@@ -212,13 +225,17 @@ final class AppModel: ObservableObject {
         trackTimer = nil
         guard showTrackInfo && !room.isEmpty else { return }
         if refresh { refreshTrack() }
-        let timer = Timer(timeInterval: (hudVisible && showTrackInfoInHUD) || (menuVisible && showTrackInfoInMenu) ? 5 : 15, repeats: true) { [weak self] _ in self?.refreshTrack() }
+        let timer = Timer(timeInterval: (hudVisible && showTrackInfoInHUD) || (menuVisible && showTrackInfoInMenu) ? 5 : 15, repeats: true) { [weak self] _ in self?.refreshTrack(retryAfterCurrent: false) }
         RunLoop.main.add(timer, forMode: .common)
         trackTimer = timer
     }
 
-    private func refreshTrack() {
-        guard !trackLoading else { return }
+    private func refreshTrack(retryAfterCurrent: Bool = true) {
+        guard showTrackInfo, !room.isEmpty else { return }
+        guard !trackLoading else {
+            if retryAfterCurrent { trackRefreshPending = true }
+            return
+        }
         if trackClient == nil {
             trackClient = Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP))
         }
@@ -229,6 +246,8 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self, self.trackClient === client else { return }
                 self.trackLoading = false
+                let refreshPending = self.trackRefreshPending
+                self.trackRefreshPending = false
                 guard self.showTrackInfo else { return }
                 switch result {
                 case .success(let track):
@@ -239,6 +258,7 @@ final class AppModel: ObservableObject {
                     self.trackError = "Track info unavailable"
                     self.trackClient = nil
                 }
+                if refreshPending { self.refreshTrack() }
             }
         }
     }
@@ -277,7 +297,7 @@ final class AppModel: ObservableObject {
         error = nil
         permissionPage = nil
         let room = room
-        let keys = MediaKeys(Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP)), modifiers: modifiers, inverted: inverted)
+        let keys = MediaKeys(Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP)), modifiers: modifiers, inverted: inverted, volumeStep: volumeStep)
         keys.onDiscoveryError = { [weak self, weak keys] message in
             guard let self = self, let keys = keys, self.listener === keys else { return }
             self.error = message

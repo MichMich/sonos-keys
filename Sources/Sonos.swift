@@ -281,7 +281,7 @@ final class Sonos {
         let actions = try soap(coordinator, "AVTransport", "GetCurrentTransportActions", instance)
             .value("Actions").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         var canRestart = false
-        if actions.contains("Seek") || actions.contains("X_DLNA_SeekTime"),
+        if !actions.contains("Previous"), actions.contains("Seek") || actions.contains("X_DLNA_SeekTime"),
            let position = try? soap(coordinator, "AVTransport", "GetPositionInfo", instance),
            let seconds = positionSeconds(position) {
             canRestart = seconds > 3
@@ -302,7 +302,7 @@ final class Sonos {
         }
     }
 
-    func perform(_ command: String) throws -> SonosFeedback {
+    func perform(_ command: String, volumeStep: Int? = nil) throws -> SonosFeedback {
         do {
             let instance = [("InstanceID", "0")]
             if command == "up" || command == "down" || command == "mute" {
@@ -315,7 +315,7 @@ final class Sonos {
                     _ = try soap(room, "RenderingControl", "SetMute", rendering + [("DesiredMute", muted == "1" ? "0" : "1")])
                     return .muted(muted != "1")
                 }
-                let amount = settings.volumeStep * (command == "up" ? 1 : -1)
+                let amount = (volumeStep ?? settings.volumeStep) * (command == "up" ? 1 : -1)
                 let response = try soap(room, "RenderingControl", "SetRelativeVolume", rendering + [("Adjustment", String(amount))])
                 guard let level = Int(response.value("NewVolume")) else { throw Failure(message: "Sonos returned no volume level.") }
                 return .volume(level)

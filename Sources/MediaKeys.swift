@@ -11,10 +11,13 @@ final class MediaKeys {
         ("Caps Lock", "⇪", .capsLock)
     ]
 
-    private let inverted: Bool
-    private let requiredModifiers: NSEvent.ModifierFlags
+    private var inverted: Bool
+    private var requiredModifiers: NSEvent.ModifierFlags
+    private var volumeStep: Int
     private let sonos: Sonos
     private let worker = DispatchQueue(label: "sonos-keys.network")
+    private let commandLock = NSLock()
+    private var commandGeneration = 0
     private var consumed = Set<Int>()
     private var volumePending = false
     private var tap: CFMachPort?
@@ -26,10 +29,18 @@ final class MediaKeys {
     var onFeedback: ((SonosFeedback) -> Void)?
     var onError: ((String) -> Void)?
 
-    init(_ sonos: Sonos, modifiers: NSEvent.ModifierFlags, inverted: Bool) {
+    init(_ sonos: Sonos, modifiers: NSEvent.ModifierFlags, inverted: Bool, volumeStep: Int) {
         self.inverted = inverted
         self.sonos = sonos
         self.requiredModifiers = modifiers
+        self.volumeStep = volumeStep
+    }
+
+    func update(modifiers: NSEvent.ModifierFlags, inverted: Bool, volumeStep: Int) {
+        if requiredModifiers != modifiers || self.inverted != inverted { consumed.removeAll() }
+        requiredModifiers = modifiers
+        self.inverted = inverted
+        self.volumeStep = volumeStep
     }
 
     func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -64,9 +75,18 @@ final class MediaKeys {
             onPending?(volume)
             let feedback = onFeedback
             let failure = onError
-            worker.async { [sonos] in
+            let volumeStep = volumeStep
+            commandLock.lock()
+            let generation = commandGeneration
+            commandLock.unlock()
+            worker.async { [weak self, sonos] in
+                guard let self = self else { return }
+                self.commandLock.lock()
+                let current = self.commandGeneration == generation
+                self.commandLock.unlock()
+                guard current else { return }
                 do {
-                    let result = try sonos.perform(command)
+                    let result = try sonos.perform(command, volumeStep: volumeStep)
                     DispatchQueue.main.async { [weak self] in
                         if volume { self?.volumePending = false }
                         feedback?(result)
@@ -113,6 +133,9 @@ final class MediaKeys {
         }
     }
     func stop() {
+        commandLock.lock()
+        commandGeneration += 1
+        commandLock.unlock()
         if let tap = tap { CGEvent.tapEnable(tap: tap, enable: false); CFMachPortInvalidate(tap) }
         if let source = source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         tap = nil

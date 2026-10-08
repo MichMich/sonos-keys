@@ -1,76 +1,128 @@
 # Sonos Keys
 
-A small native macOS menu bar app that controls Sonos with modified media keys.
+A native macOS menu bar app for Sonos playback, volume, and mute.
+Use modified media keys or the controls in the click menu.
+The app needs macOS 13 or later and reachable Sonos speakers.
+It needs no Sonos cloud account, browser, Node, Python, or command-line runtime.
 
-By default, media keys control your Mac. Hold your selected modifier keys to control Sonos. Command (⌘) is the default.
+## Install and update
 
-Enable **Control Sonos by default** to reverse this behavior. Media keys alone control Sonos. Hold all selected modifiers to control your Mac.
-In inverted mode, Mac media-key events omit the selected modifiers. Other modifiers remain unchanged.
-The setting starts off. Changes apply immediately. Close dismisses the settings window.
+Download the universal app ZIP and its SHA-256 checksum from [GitHub Releases](https://github.com/MichMich/sonos-keys/releases).
+The release app is signed and notarized. One download supports Intel and Apple Silicon.
+Extract the ZIP and copy Sonos Keys to Applications before you grant permissions or enable launch at login.
+For updates, replace the app with the new release.
 
-## Controls
-
-| Media key | Sonos action |
-| --- | --- |
-| Play/Pause | Toggle playback |
-| Previous | Restart the track after more than 3 seconds, otherwise go to the previous track |
-| Next | Next track |
-| Volume Up | Increase room volume |
-| Volume Down | Decrease room volume |
-| Mute | Toggle room mute |
-
-The menu flyout uses the native macOS popover material with transparency and background blur.
-It has grouped actions and a separate error section.
-A separate section lists the selected Sonos room and current Mac audio output beside their shortcuts.
-The output name refreshes when the menu opens. Long names use a tooltip. Settings scroll within a compact window.
-
-## Track info
-
-Settings has separate switches for track info in the media-key HUD and the click menu. Both start off.
-When enabled, the app shows the cover, title, and artist when Sonos provides them. Radio uses station details when available.
-Track info refreshes every 15 seconds in the background, immediately when its view opens, and every 5 seconds while visible.
-Both views share the same metadata cache. Requests run separately from media-key commands.
-Turn both switches off to stop updates.
-
-Previous reads the position from the group coordinator. After more than 3 seconds, it seeks to the track start.
-The app checks the source's available actions before a restart or Previous command.
-The HUD shows Track restarted only after the position returns near zero on the same track.
-If restart fails, it sends Previous only when available. Otherwise the HUD shows Previous unavailable.
-With track info enabled in the HUD, Next, Previous, and restart results stay visible for 3 seconds.
-
-The HUD appears below the menu bar icon. It shows confirmed results and a loading indicator for slow commands. Extra volume presses do not accumulate while a volume request is pending.
-
-## Download
-
-Download the app ZIP and its SHA-256 checksum from [GitHub Releases](https://github.com/MichMich/sonos-keys/releases).
-The signed and notarized app supports Intel and Apple Silicon.
-Extract the ZIP and copy Sonos Keys to Applications. Xcode is not required for the release download.
-
-Or install the app with Homebrew:
+Or install with Homebrew:
 
 ```sh
 brew install --cask michmich/tap/sonos-keys
 ```
 
-See [the Homebrew tap](https://github.com/MichMich/homebrew-tap) for upgrades and installation notes.
+To update a Homebrew installation:
 
-## Requirements
+```sh
+brew update
+brew upgrade --cask sonos-keys
+```
 
-- macOS 13 or later.
-- Xcode for builds.
-- Sonos speakers on the same local network, or reachable through the optional Speaker IP setting.
+## First use and permissions
 
-The app uses SwiftUI and native macOS frameworks. It has no external dependencies, browser interface, or cloud account requirement.
+Allow Sonos Keys in System Settings → Privacy & Security → Accessibility and Input Monitoring.
+If macOS requests local network access, allow it.
+Choose a Sonos room in Settings, then enable Sonos keys in the menu.
 
-## Build
+If a required permission is absent, the app links to the relevant settings page.
+After an Accessibility change, use **Retry media keys**.
+After an Input Monitoring change, restart the app.
+The app cannot grant these permissions itself.
 
-Version tags produce a signed and notarized app for Intel and Apple Silicon in [GitHub Releases](https://github.com/MichMich/sonos-keys/releases).
-See [Release setup](docs/releases.md) for the workflow and required secrets.
+## Media keys
 
-Open SonosKeys.xcodeproj in Xcode. Select the SonosKeys scheme and My Mac, then press Command-R.
+By default, media keys control your Mac. Hold Command (⌘) to control Sonos.
+Settings lets you choose Command, Option, Control, Shift, Fn / Globe, Caps Lock, or a combination.
+All selected modifiers must be active. Extra modifiers do not cancel the shortcut.
 
-The public project defaults to local ad hoc signing. For stable permission identity across builds, select your own Apple Development certificate and team in Signing & Capabilities. No certificate or private key is included.
+Enable **Control Sonos by default** to reverse the route.
+Media keys alone control Sonos. Hold all selected modifiers to control your Mac.
+In this mode, the app removes the selected modifiers from the Mac media-key event.
 
+| Media key | Sonos action |
+| --- | --- |
+| Play/Pause | Toggle playback |
+| Previous | Restart after more than 3 seconds, or select the previous track when available |
+| Next | Select the next track |
+| Volume Up / Down | Change the selected room's volume by the configured step |
+| Mute | Toggle the selected room's mute state |
+
+Caps Lock uses its on/off state. Fn depends on your keyboard.
+Option-volume can conflict with macOS sound settings.
+
+Previous checks the source's available actions before a restart or previous-track command.
+A restart requires a seek action and a position above 3 seconds.
+The app reports **Track restarted** only after the same track returns near its start.
+If restart fails, the app sends Previous only when available. Otherwise it reports **Previous unavailable**.
+
+The media-key HUD appears below the menu bar icon without taking focus.
+It shows results and a delayed loading indicator for slow commands.
+Extra volume presses do not accumulate while a volume request is pending.
+
+## Click menu and track info
+
+The menu shows the selected Sonos room, the current Mac audio output, and their shortcuts.
+It reads the Mac output name each time it opens. Long names have a tooltip.
+
+One compact row contains Previous, Play/Pause, Next, Mute, and a volume slider.
+Unsupported transport actions stay dimmed and disabled.
+The menu reads room volume and mute on open and every 5 seconds while visible.
+The slider sends `SetVolume` after release. Media keys use `SetRelativeVolume` for each volume adjustment.
+
+Track info has separate switches for the HUD and menu. Both start off.
+When enabled, the app shows the cover, title, and artist from Sonos. Radio can show station details.
+Track info refreshes every 15 seconds in the background, on view opening, and every 5 seconds while its view is visible.
+Both views share the track data. Turn both switches off to stop track updates.
+With HUD track info enabled, Next, Previous, and restart results stay visible for 3 seconds.
+
+The menu and HUD appear one at a time.
+Each waits for the other panel's fade and shrink animation to finish before it appears.
+Opening the menu also cancels delayed HUD feedback.
+
+## Settings
+
+Changes apply immediately and stay on your Mac.
+Settings changes preserve the enabled or disabled media-key state. If you disable Sonos keys, the app discards commands that did not start.
+Settings uses cards with right-aligned switches. Launch at login has its own card.
+The scroll area keeps the Close button visible.
+
+- Choose a discovered room. Use **Refresh** to repeat discovery.
+- Choose a volume step from 1 to 20.
+- Choose the modifiers and the default media-key route.
+- Enable track info separately for the HUD and menu.
+- Enable **Launch at login** to open the app when you sign in.
+
+For a fixed speaker address, turn on **Manual**, enter any speaker's IPv4 address, then click **Refresh**.
+A valid address applies immediately. An incomplete address leaves the previous address active.
+If you turn Manual off, the app clears the stored address and uses automatic discovery.
+
+## Local network behavior
+
+Automatic discovery first uses SSDP, the local device discovery protocol.
+If SSDP finds no usable speaker, the app tries Bonjour (`_sonos._tcp`) for up to 2.5 seconds.
+Manual IP skips both discovery methods and reads the speaker directly over HTTP on TCP port 1400.
+Devices without a Bonjour advertisement need SSDP or Manual IP.
+
+Playback controls target the group's coordinator, the speaker that manages group playback.
+Volume and mute target the selected room.
+Your Mac must reach both that room and its coordinator on TCP port 1400.
+Across VLANs, Bonjour needs an mDNS reflector or proxy. Routing and firewall rules must permit the HTTP connections.
+For Manual IP, a DHCP reservation keeps the address stable.
+
+The app caches discovered devices until a command error.
+Group topology stays cached for 5 seconds, so group changes can take 5 seconds to appear.
+Failed commands do not retry automatically.
+
+## Build from source
+
+Open `SonosKeys.xcodeproj` in Xcode. Select the SonosKeys scheme and My Mac, then press Command-R.
 For a terminal build:
 
 ```sh
@@ -78,105 +130,53 @@ For a terminal build:
 open "build/Sonos Keys.app"
 ```
 
-Copy the app to Applications and keep it there before you grant permissions or enable launch at login.
+The public project uses local ad hoc signing by default.
+For a stable permission identity across builds, select your Apple Development certificate and team in Signing & Capabilities.
+No certificate or private key is included. Ad hoc builds can require fresh permission approval.
+Keep your app in Applications before you grant permissions or enable launch at login.
 
-## Permissions
+## Release setup
 
-Allow Sonos Keys in System Settings → Privacy & Security → Accessibility and Input Monitoring. If macOS requests local network access, allow it.
+The [Release workflow](.github/workflows/release.yml) runs for version tags such as `v1.0.0`.
+Use three numeric version parts. The tagged commit must belong to `main`.
+The workflow builds a universal app, sets its version from the tag, signs it, and checks Apple's notarization result.
+It staples the notarization ticket, publishes the ZIP and checksum, then updates [the Homebrew tap](https://github.com/MichMich/homebrew-tap).
+An older run cannot downgrade the Homebrew cask.
 
-If a required permission is missing, the app opens the relevant settings page. Use Retry media keys after an Accessibility change. Restart the app after an Input Monitoring change.
+Configure these repository secrets in GitHub Settings → Secrets and variables → Actions:
 
-Ad hoc builds can require new permission approval. Opening System Settings does not grant permission automatically.
+| Secret | Value |
+| --- | --- |
+| `DEVELOPER_ID_CERTIFICATE_BASE64` | Base64-encoded PKCS#12 file with the Developer ID Application certificate and private key |
+| `DEVELOPER_ID_CERTIFICATE_PASSWORD` | The PKCS#12 password |
+| `APPLE_API_PRIVATE_KEY` | The App Store Connect team API key `.p8` contents |
+| `APPLE_API_KEY_ID` | The API key ID |
+| `APPLE_API_ISSUER_ID` | The API issuer ID |
+| `HOMEBREW_TAP_TOKEN` | A fine-grained token for `MichMich/homebrew-tap` with Contents read and write access |
 
-## Settings
+Use a dedicated team API key with the Developer role.
+Keep credentials outside the repository. The workflow uses a temporary keychain and removes temporary credentials after the job.
+Restrict the Homebrew token to the tap repository and renew it before expiry.
 
-- Manual is off by default. Turn it on to show Speaker IP and its explanation.
-- Enter any speaker's IPv4 address and click Refresh to load rooms without SSDP discovery.
-- With Manual off, the app uses automatic discovery and clears the stored address.
-- With Manual on, a valid IPv4 address applies immediately. An incomplete address leaves the previous address active.
-- Choose a discovered Sonos room. Use Refresh to repeat discovery.
-- Drag the volume-step bar to select a step from 1 to 20.
-- Choose Command, Option, Control, Shift, Fn / Globe, Caps Lock, or a combination.
-- All selected modifiers must be active. Extra modifiers do not cancel the shortcut.
-- Enable Launch at login to open the app when you sign in.
-
-Caps Lock uses its on/off state. Fn depends on your keyboard. Option-volume can conflict with macOS sound settings.
-
-Changes apply immediately and use local macOS UserDefaults. No personal room configuration is included in this repository.
-
-## Local Sonos control
-
-SSDP discovery finds device descriptions and service endpoints. ZoneGroupTopology identifies visible rooms and the group coordinator.
-
-If SSDP finds no usable speaker, Bonjour searches `_sonos._tcp` for up to 2.5 seconds.
-The app resolves advertised hosts and checks their Sonos device descriptions on HTTP port 1400.
-Manual IP skips both discovery methods. Devices without a Bonjour advertisement still need SSDP or Manual IP.
-Across VLANs, Bonjour requires an mDNS reflector or proxy. HTTP connections must also pass the firewall.
-
-With Speaker IP set, the app reads that speaker's description and topology directly over HTTP on TCP port 1400.
-Your Mac must also reach the selected speaker and its group coordinator. VLAN routing and firewall rules must permit these connections.
-Use a DHCP reservation to keep the address stable. The setting accepts IPv4 addresses.
-
-Playback targets the coordinator. Volume and mute target the selected room directly. Volume uses RenderingControl SetRelativeVolume, including negative adjustments. It does not read and set absolute volume.
-
-The app discovers devices at startup and caches them until a command error. Playback topology stays cached for five seconds. Group changes can therefore take up to five seconds to appear.
-
-Network work runs on a serial background queue. Failed commands are not retried automatically.
-
-## About and license
-
-The About window shows the app icon, version, copyright, and license in a centered layout.
-The Xonay Media button opens the website.
-
-
-© 2026 Michael Teeuw, [Xonay Media](https://xonaymedia.nl).
-
-Non-commercial use, modification, and redistribution are permitted with attribution and a copy of the license. Commercial use requires separate permission. See [LICENSE](LICENSE).
-
-This is publicly available source under a custom non-commercial license.
+Before a release, check media-key routes, modifiers, discovery, grouped playback, volume, mute, permissions, and launch at login on a Mac.
+Also check menu controls, track updates, and rapid menu/HUD transitions.
+Commit the release code to `main`, then create and push its version tag.
+After the workflow succeeds, check the downloaded app from Applications.
+If the tagged source needs a fix, use a new version tag. Otherwise retry the failed run.
+A repeated successful run replaces that tag's assets.
+If the Homebrew step fails, the app release stays available. Correct the tap access or cask issue, then retry.
 
 ## Known limits
 
-- Previous and next depend on the playback source.
-- Startup discovery can delay an early command.
-- Playback commands can queue on slow networks.
+- Previous and Next depend on the playback source.
+- Startup discovery can delay an early command. Slow networks can delay playback commands.
 - A layout-recursion warning can appear once at startup. Its cause remains unresolved.
-- The About panel requires a new build and visual check.
+- Before release, check screen-edge placement, desktop clicks, Mission Control, and outside-menu dismissal on the signed app.
 
-## Implementation
+## About and license
 
-SwiftUI provides the views. AppKit provides the status item, windows, and HUD panel. CoreGraphics captures media keys. Foundation handles HTTP and XML. Darwin handles SSDP UDP.
+The About window shows the app version, copyright, and license. Its Xonay Media button opens the website.
 
-The HUD does not take focus. It follows the status item, fades in and out, and uses a compact height for playback.
-
-## Checks before a release
-
-Check unmodified media-key behavior, modifier combinations, room discovery, grouped playback, volume, mute, all HUD states, permissions, and launch at login.
-
-Next task: build the About panel and check the website link, then check the unresolved startup layout warning.
-
-### Settings layout
-
-Settings use shared cards with right-aligned switches.
-Launch at login has its own card.
-The media-key card shows the selected room, Mac audio output, and key mappings.
-Changes apply immediately. The scroll area keeps the Close button visible.
-
-### Click menu controls
-
-The click menu has one compact row with Previous, Play/Pause, Next, Mute, and a volume slider.
-Unsupported actions stay dimmed and disabled.
-The menu reads the selected room's volume and mute state. Transport actions use the group coordinator.
-It refreshes on open and every five seconds while visible. It stops this timer on close.
-The slider sends SetVolume after release. Media keys still use SetRelativeVolume.
-The local Release build and 13 simulated SOAP checks passed. A sample preview checked layout, slider, and Pause callbacks.
-Next check: test controls on an actual speaker. No new technical debt was identified.
-
-### Panel transitions
-
-The click menu and HUD wait for each other's close animation before presentation.
-Both use a shared 0.25-second fade and shrink to 96%, anchored at the top center.
-HUD feedback waits for the popover's close notification. Menu presentation waits for the HUD's animation completion.
-New HUD feedback cancels older pending feedback. Opening the menu cancels delayed loading feedback.
-The local animation checks cover deferred presentation, cancellation, completion order, and the fixed top-center anchor.
-Next check: switch panels quickly with actual media keys. No new technical debt was identified.
+© 2026 Michael Teeuw, [Xonay Media](https://xonaymedia.nl).
+Non-commercial use, modification, and redistribution require attribution and a copy of [LICENSE](LICENSE).
+Commercial use requires separate permission.
