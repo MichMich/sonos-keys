@@ -77,6 +77,7 @@ The speaker icon shows a spinner while controls load or a command runs. The menu
 During a command, the controls keep their normal colors and ignore extra clicks.
 The menu reads room volume and mute on open and every 5 seconds while visible.
 The slider sends `SetVolume` after release. Media keys use `SetRelativeVolume` for each volume adjustment.
+Both volume controls turn mute off after the volume changes.
 
 Track info has separate switches for the HUD and menu. Both start off.
 When enabled, the app shows the cover, title, and artist from Sonos. Radio can show station details.

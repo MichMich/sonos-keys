@@ -296,6 +296,8 @@ final class Sonos {
             let room = try target().0
             _ = try soap(room, "RenderingControl", "SetVolume",
                          [("InstanceID", "0"), ("Channel", "Master"), ("DesiredVolume", String(min(100, max(0, volume))))])
+            _ = try soap(room, "RenderingControl", "SetMute",
+                         [("InstanceID", "0"), ("Channel", "Master"), ("DesiredMute", "0")])
         } catch {
             invalidateCache()
             throw error
@@ -318,6 +320,7 @@ final class Sonos {
                 let amount = (volumeStep ?? settings.volumeStep) * (command == "up" ? 1 : -1)
                 let response = try soap(room, "RenderingControl", "SetRelativeVolume", rendering + [("Adjustment", String(amount))])
                 guard let level = Int(response.value("NewVolume")) else { throw Failure(message: "Sonos returned no volume level.") }
+                _ = try soap(room, "RenderingControl", "SetMute", rendering + [("DesiredMute", "0")])
                 return .volume(level)
             }
 
