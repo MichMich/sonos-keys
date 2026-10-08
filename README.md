@@ -74,6 +74,7 @@ It reads the Mac output name each time it opens. Long names have a tooltip.
 One compact row contains Previous, Play/Pause, Next, Mute, and a volume slider.
 Unsupported transport actions stay dimmed and disabled.
 The speaker icon shows a spinner while controls load or a command runs. The menu keeps the same height.
+During a command, the controls keep their normal colors and ignore extra clicks.
 The menu reads room volume and mute on open and every 5 seconds while visible.
 The slider sends `SetVolume` after release. Media keys use `SetRelativeVolume` for each volume adjustment.
 

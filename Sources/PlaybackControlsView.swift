@@ -23,11 +23,12 @@ struct PlaybackControlsView: View {
                         if !editing { perform("volume", Int(volume)) }
                     }
                     .controlSize(.small)
-                    .disabled(state?.volume == nil || busy)
+                    .disabled(state?.volume == nil)
                     .accessibilityLabel("Sonos volume")
                     .help("Volume: \(Int(volume))%")
                     .padding(.leading, 6)
                 }
+                .allowsHitTesting(!busy)
                 if let error = error {
                     Text(error).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -48,10 +49,10 @@ struct PlaybackControlsView: View {
                 .foregroundStyle(Color.accentColor)
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
-                .opacity(available && !busy ? 1 : 0.3)
+                .opacity(available ? 1 : 0.3)
         }
         .buttonStyle(.plain)
-        .disabled(!available || busy)
+        .disabled(!available)
         .help(title)
         .accessibilityLabel(title)
     }
