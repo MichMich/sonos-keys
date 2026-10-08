@@ -3,7 +3,6 @@ import SwiftUI
 struct PlaybackControlsView: View {
     let state: SonosControls?
     let busy: Bool
-    let loading: Bool
     let error: String?
     let perform: (String, Int?) -> Void
     @State private var volume = 0.0
@@ -27,17 +26,14 @@ struct PlaybackControlsView: View {
                     .disabled(state?.volume == nil || busy)
                     .accessibilityLabel("Sonos volume")
                     .help("Volume: \(Int(volume))%")
+                    .padding(.leading, 6)
                 }
-                if busy || (loading && state == nil) {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.mini)
-                        Text(busy ? "Updating Sonos…" : "Loading controls…").font(.caption).foregroundStyle(.secondary)
-                    }
-                } else if let error = error {
+                if let error = error {
                     Text(error).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .padding(.horizontal, 6)
         }
         .onAppear { volume = Double(state?.volume ?? 0) }
         .onChange(of: state?.volume) { level in

@@ -11,7 +11,13 @@ struct MenuView: View {
             PanelSection {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(spacing: 14) {
-                        IconTile { Image(systemName: "hifispeaker.fill") }
+                        IconTile {
+                            if model.controlsBusy || (model.controlsLoading && model.controls == nil) {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "hifispeaker.fill")
+                            }
+                        }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(model.room.isEmpty ? "Choose a room" : model.room)
                                 .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
@@ -45,7 +51,7 @@ struct MenuView: View {
 
             if !model.room.isEmpty {
                 PlaybackControlsView(state: model.controls, busy: model.controlsBusy,
-                                     loading: model.controlsLoading, error: model.controlsError,
+                                     error: model.controlsError,
                                      perform: model.control)
             }
 
