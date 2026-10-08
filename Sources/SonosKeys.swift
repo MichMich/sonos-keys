@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let menu = NSPopover()
     private var settingsWindow: NSWindow?
     private var aboutWindow: NSWindow?
+    private var afterMenuClose: (() -> Void)?
+    private var closingMenu = false
+    private var allowMenuClose = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -27,8 +30,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         button.action = #selector(showMenu)
         model.attachStatusButton(button)
         menu.behavior = .transient
+        menu.animates = false
         menu.delegate = self
-        model.closeMenu = { [weak self] in self?.menu.close() }
+        model.closeMenu = { [weak self] present in
+            guard let self = self else { return }
+            if self.menu.isShown || self.model.menuVisible {
+                self.afterMenuClose = present
+                self.closeMenu()
+            } else { present() }
+        }
         menu.contentViewController = NSHostingController(rootView: MenuView(
             model: model,
             openSettings: { [weak self] in self?.showSettings() },
@@ -43,19 +53,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         window.makeKeyAndOrderFront(nil)
     }
-    func popoverDidClose(_ notification: Notification) { model.setMenuVisible(false) }
+    func popoverDidClose(_ notification: Notification) {
+        closingMenu = false
+        model.setMenuVisible(false)
+        let present = afterMenuClose
+        afterMenuClose = nil
+        present?()
+    }
+
+    func popoverShouldClose(_ popover: NSPopover) -> Bool {
+        if allowMenuClose { return true }
+        closeMenu()
+        return false
+    }
+
+    private func closeMenu() {
+        guard !closingMenu, menu.isShown, let window = menu.contentViewController?.view.window else { return }
+        closingMenu = true
+        let frame = window.frame
+        PanelAnimation.close(window) { [weak self, weak window] in
+            self?.allowMenuClose = true
+            self?.menu.close()
+            self?.allowMenuClose = false
+            window?.setFrame(frame, display: false)
+            window?.alphaValue = 1
+        }
+    }
 
     @objc private func showMenu() {
         guard let button = statusItem.button else { return }
-        if menu.isShown { menu.close() }
+        if menu.isShown { closeMenu() }
         else {
-            NSApp.activate(ignoringOtherApps: true)
-            menu.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            model.prepareMenu { [weak self, weak button] in
+                guard let self = self, let button = button else { return }
+                NSApp.activate(ignoringOtherApps: true)
+                self.menu.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            }
         }
     }
 
     private func showAbout() {
-        menu.close()
+        closeMenu()
         if aboutWindow == nil {
             let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "About Sonos Keys"
@@ -71,7 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func showSettings() {
-        menu.close()
+        closeMenu()
         if settingsWindow == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 488, height: 700), styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "Sonos Keys Settings"

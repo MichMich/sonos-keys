@@ -9,6 +9,7 @@ final class SonosHUD {
     private var generation = 0
     var anchorRect: (() -> NSRect?)?
     var onVisibilityChange: ((Bool) -> Void)?
+    var beforePresentation: ((@escaping () -> Void) -> Void)?
     let trackInfo = HUDTrackInfo()
 
     func show(room: String, feedback: SonosFeedback) {
@@ -29,6 +30,15 @@ final class SonosHUD {
     }
 
     private func present(room: String, feedback: SonosFeedback, generation currentGeneration: Int) {
+        let present = { [weak self] in
+            guard let self = self, self.generation == currentGeneration else { return }
+            self.render(room: room, feedback: feedback, generation: currentGeneration)
+        }
+        if let beforePresentation = beforePresentation { beforePresentation(present) }
+        else { present() }
+    }
+
+    private func render(room: String, feedback: SonosFeedback, generation currentGeneration: Int) {
         guard let anchor = anchorRect?() else { return }
         var height: CGFloat
         switch feedback {
@@ -77,16 +87,12 @@ final class SonosHUD {
         if case .loading = feedback { return }
         let dismissal = DispatchWorkItem { [weak self, weak panel] in
             guard let self = self, let panel = panel, self.generation == currentGeneration else { return }
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.25
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                panel.animator().alphaValue = 0
-            }, completionHandler: { [weak self, weak panel] in
+            PanelAnimation.close(panel) { [weak self, weak panel] in
                 if self?.generation == currentGeneration {
                     panel?.orderOut(nil)
                     self?.onVisibilityChange?(false)
                 }
-            })
+            }
         }
         self.dismissal = dismissal
         let duration: TimeInterval
@@ -96,12 +102,23 @@ final class SonosHUD {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: dismissal)
     }
-    func hide() {
+    func hide(completion: (() -> Void)? = nil) {
         generation += 1
         loading?.cancel()
         dismissal?.cancel()
+        if let completion = completion, let panel = panel, panel.isVisible {
+            let currentGeneration = generation
+            PanelAnimation.close(panel) { [weak self, weak panel] in
+                guard let self = self, self.generation == currentGeneration else { return }
+                panel?.orderOut(nil)
+                self.onVisibilityChange?(false)
+                completion()
+            }
+            return
+        }
         panel?.orderOut(nil)
         onVisibilityChange?(false)
+        completion?()
     }
 }
 

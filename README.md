@@ -171,3 +171,12 @@ It refreshes on open and every five seconds while visible. It stops this timer o
 The slider sends SetVolume after release. Media keys still use SetRelativeVolume.
 The local Release build and 13 simulated SOAP checks passed. A sample preview checked layout, slider, and Pause callbacks.
 Next check: test controls on an actual speaker. No new technical debt was identified.
+
+### Panel transitions
+
+The click menu and HUD wait for each other's close animation before presentation.
+Both use a shared 0.25-second fade and shrink to 96%, anchored at the top center.
+HUD feedback waits for the popover's close notification. Menu presentation waits for the HUD's animation completion.
+New HUD feedback cancels older pending feedback. Opening the menu cancels delayed loading feedback.
+The local animation checks cover deferred presentation, cancellation, completion order, and the fixed top-center anchor.
+Next check: switch panels quickly with actual media keys. No new technical debt was identified.

@@ -31,7 +31,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var controlsLoading = false
     @Published private(set) var controlsBusy = false
     @Published private(set) var controlsError: String?
-    var closeMenu: (() -> Void)?
+    var closeMenu: ((@escaping () -> Void) -> Void)?
 
     var modifierTitle: String {
         MediaKeys.modifiers.filter { modifiers.contains($0.flag) }.map { $0.symbol }.joined(separator: " + ")
@@ -58,6 +58,10 @@ final class AppModel: ObservableObject {
         showTrackInfoInMenu = defaults.object(forKey: "showTrackInfoInMenu") as? Bool ?? false
         hud.trackInfo.enabled = showTrackInfoInHUD
         hud.onVisibilityChange = { [weak self] visible in self?.setHUDVisible(visible) }
+        hud.beforePresentation = { [weak self] present in
+            if let closeMenu = self?.closeMenu { closeMenu(present) }
+            else { present() }
+        }
         refreshLoginStatus()
         updateTrackPolling()
         if !room.isEmpty && defaults.object(forKey: "enabled") as? Bool != false {
@@ -103,7 +107,6 @@ final class AppModel: ObservableObject {
 
     func setHUDVisible(_ visible: Bool) {
         guard hudVisible != visible else { return }
-        if visible { closeMenu?() }
         hudVisible = visible
         updateTrackPolling(refresh: visible && showTrackInfoInHUD)
     }
@@ -113,7 +116,6 @@ final class AppModel: ObservableObject {
         controlsTimer?.invalidate()
         controlsTimer = nil
         if visible {
-            hud.hide()
             refreshAudioOutputName()
             refreshControls()
             let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in self?.refreshControls() }
@@ -121,6 +123,10 @@ final class AppModel: ObservableObject {
             controlsTimer = timer
         }
         updateTrackPolling(refresh: visible && showTrackInfoInMenu)
+    }
+
+    func prepareMenu(_ present: @escaping () -> Void) {
+        hud.hide(completion: present)
     }
 
     private func refreshControls() {
