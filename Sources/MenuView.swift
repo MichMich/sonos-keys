@@ -43,6 +43,12 @@ struct MenuView: View {
                 TrackInfoView(track: model.track, emptyText: model.trackError ?? (model.trackLoading ? "Loading track info…" : "No track information"))
             }
 
+            if !model.room.isEmpty {
+                PlaybackControlsView(state: model.controls, busy: model.controlsBusy,
+                                     loading: model.controlsLoading, error: model.controlsError,
+                                     perform: model.control)
+            }
+
             if let error = model.error {
                 PanelSection(background: .orange.opacity(0.05), topDivider: true) {
                     ErrorView(

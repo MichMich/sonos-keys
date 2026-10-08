@@ -161,3 +161,13 @@ Settings use shared cards with right-aligned switches.
 Launch at login has its own card.
 The media-key card shows the selected room, Mac audio output, and key mappings.
 Changes apply immediately. The scroll area keeps the Close button visible.
+
+### Click menu controls
+
+The click menu has one compact row with Previous, Play/Pause, Next, Mute, and a volume slider.
+Unsupported actions stay dimmed and disabled.
+The menu reads the selected room's volume and mute state. Transport actions use the group coordinator.
+It refreshes on open and every five seconds while visible. It stops this timer on close.
+The slider sends SetVolume after release. Media keys still use SetRelativeVolume.
+The local Release build and 13 simulated SOAP checks passed. A sample preview checked layout, slider, and Pause callbacks.
+Next check: test controls on an actual speaker. No new technical debt was identified.

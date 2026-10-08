@@ -27,6 +27,15 @@ struct SonosTrack {
     let artworkURL: URL?
 }
 
+struct SonosControls {
+    let volume: Int?
+    let muted: Bool?
+    let playing: Bool
+    let canPlayPause: Bool
+    let canPrevious: Bool
+    let canNext: Bool
+}
+
 struct Failure: LocalizedError {
     let message: String
     var errorDescription: String? { message }
@@ -260,6 +269,37 @@ final class Sonos {
         let url = artwork.isEmpty ? nil : URL(string: artwork, relativeTo: coordinator.location)?.absoluteURL
         return SonosTrack(title: title, artist: artist, album: album,
                           artworkURL: url?.scheme == "http" || url?.scheme == "https" ? url : nil)
+    }
+
+    func controls() throws -> SonosControls {
+        let (room, coordinator) = try target()
+        let instance = [("InstanceID", "0")]
+        let rendering = instance + [("Channel", "Master")]
+        let volume = try? soap(room, "RenderingControl", "GetVolume", rendering).value("CurrentVolume")
+        let mute = try? soap(room, "RenderingControl", "GetMute", rendering).value("CurrentMute")
+        let state = try soap(coordinator, "AVTransport", "GetTransportInfo", instance).value("CurrentTransportState")
+        let actions = try soap(coordinator, "AVTransport", "GetCurrentTransportActions", instance)
+            .value("Actions").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        var canRestart = false
+        if actions.contains("Seek") || actions.contains("X_DLNA_SeekTime"),
+           let position = try? soap(coordinator, "AVTransport", "GetPositionInfo", instance),
+           let seconds = positionSeconds(position) {
+            canRestart = seconds > 3
+        }
+        return SonosControls(volume: volume.flatMap(Int.init), muted: mute == "0" ? false : mute == "1" ? true : nil,
+                             playing: state == "PLAYING", canPlayPause: actions.contains(state == "PLAYING" ? "Pause" : "Play"),
+                             canPrevious: actions.contains("Previous") || canRestart, canNext: actions.contains("Next"))
+    }
+
+    func setVolume(_ volume: Int) throws {
+        do {
+            let room = try target().0
+            _ = try soap(room, "RenderingControl", "SetVolume",
+                         [("InstanceID", "0"), ("Channel", "Master"), ("DesiredVolume", String(min(100, max(0, volume))))])
+        } catch {
+            invalidateCache()
+            throw error
+        }
     }
 
     func perform(_ command: String) throws -> SonosFeedback {

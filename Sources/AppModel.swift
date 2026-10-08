@@ -27,6 +27,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var trackLoading = false
     @Published private(set) var trackError: String?
     @Published private(set) var audioOutputName = "Mac"
+    @Published private(set) var controls: SonosControls?
+    @Published private(set) var controlsLoading = false
+    @Published private(set) var controlsBusy = false
+    @Published private(set) var controlsError: String?
     var closeMenu: (() -> Void)?
 
     var modifierTitle: String {
@@ -40,6 +44,9 @@ final class AppModel: ObservableObject {
     private var trackTimer: Timer?
     private var trackClient: Sonos?
     private let trackWorker = DispatchQueue(label: "sonos-keys.track-info")
+    private var controlsClient: Sonos?
+    private var controlsTimer: Timer?
+    private let controlsWorker = DispatchQueue(label: "sonos-keys.menu-controls")
 
     init() {
         room = defaults.string(forKey: "room") ?? ""
@@ -73,9 +80,14 @@ final class AppModel: ObservableObject {
         defaults.set(self.speakerIP, forKey: "speakerIP")
         defaults.set(volumeStep, forKey: "volumeStep")
         trackClient = nil
+        controlsClient = nil
+        controls = nil
+        controlsLoading = false
+        controlsBusy = false
         track = nil
         trackLoading = false
         updateTrackPolling()
+        if menuVisible { refreshControls() }
         stop()
         enable()
     }
@@ -98,11 +110,79 @@ final class AppModel: ObservableObject {
 
     func setMenuVisible(_ visible: Bool) {
         menuVisible = visible
+        controlsTimer?.invalidate()
+        controlsTimer = nil
         if visible {
             hud.hide()
             refreshAudioOutputName()
+            refreshControls()
+            let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in self?.refreshControls() }
+            RunLoop.main.add(timer, forMode: .common)
+            controlsTimer = timer
         }
         updateTrackPolling(refresh: visible && showTrackInfoInMenu)
+    }
+
+    private func refreshControls() {
+        guard !room.isEmpty, !controlsLoading, !controlsBusy else { return }
+        if controlsClient == nil {
+            controlsClient = Sonos(SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP))
+        }
+        guard let client = controlsClient else { return }
+        controlsLoading = true
+        controlsWorker.async { [weak self] in
+            let result = Result { try client.controls() }
+            DispatchQueue.main.async {
+                guard let self = self, self.controlsClient === client else { return }
+                self.controlsLoading = false
+                guard !self.controlsBusy else { return }
+                switch result {
+                case .success(let controls):
+                    self.controls = controls
+                    self.controlsError = nil
+                case .failure:
+                    self.controls = nil
+                    self.controlsError = "Controls unavailable. Check the Sonos connection."
+                    self.controlsClient = nil
+                }
+            }
+        }
+    }
+
+    func control(_ command: String, volume: Int? = nil) {
+        guard !controlsBusy, let client = controlsClient, let state = controls else { return }
+        switch command {
+        case "play": guard state.canPlayPause else { return }
+        case "previous": guard state.canPrevious else { return }
+        case "next": guard state.canNext else { return }
+        case "mute": guard state.muted != nil else { return }
+        case "volume": guard state.volume != nil, volume != nil else { return }
+        default: return
+        }
+        controlsBusy = true
+        controlsError = nil
+        controlsWorker.async { [weak self] in
+            let result = Result {
+                if let volume = volume { try client.setVolume(volume) }
+                else {
+                    let feedback = try client.perform(command)
+                    if case .previousUnavailable = feedback { throw Failure(message: "Previous is unavailable for this source.") }
+                }
+                return try client.controls()
+            }
+            DispatchQueue.main.async {
+                guard let self = self, self.controlsClient === client else { return }
+                self.controlsBusy = false
+                switch result {
+                case .success(let controls): self.controls = controls
+                case .failure(let error):
+                    self.controls = nil
+                    self.controlsError = error.localizedDescription
+                    self.controlsClient = nil
+                }
+                if self.showTrackInfo { self.refreshTrack() }
+            }
+        }
     }
 
     func refreshAudioOutputName() {
