@@ -40,6 +40,7 @@ final class SonosHUD {
 
     private func render(room: String, feedback: SonosFeedback, generation currentGeneration: Int) {
         guard let anchor = anchorRect?() else { return }
+        let hiddenMenuBar = !NSMenu.menuBarVisible()
         var height: CGFloat
         switch feedback {
         case .volume: height = 120
@@ -47,6 +48,7 @@ final class SonosHUD {
         default: height = 94
         }
         if trackInfo.enabled { height += 82 }
+        if hiddenMenuBar { height -= 10 }
 
         if panel == nil {
             let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -64,8 +66,9 @@ final class SonosHUD {
         let screen = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.midY)) }) ?? NSScreen.main
         let frame = screen?.visibleFrame ?? anchor
         let x = min(frame.maxX - 308, max(frame.minX + 8, anchor.midX - 150))
-        let arrowX = min(274, max(26, anchor.midX - x))
-        let targetFrame = NSRect(x: x, y: anchor.minY - height - 4, width: 300, height: height)
+        let arrowX: CGFloat? = hiddenMenuBar ? nil : min(274, max(26, anchor.midX - x))
+        let top = hiddenMenuBar ? (screen?.frame.maxY ?? anchor.maxY) - (screen?.safeAreaInsets.top ?? 0) - 8 : anchor.minY - 4
+        let targetFrame = NSRect(x: x, y: top - height, width: 300, height: height)
         let visible = panel.isVisible
         if !visible { panel.setFrame(targetFrame, display: false) }
         let view = HUDView(room: room, feedback: feedback, arrowX: arrowX, trackInfo: trackInfo)
@@ -130,7 +133,7 @@ final class HUDTrackInfo: ObservableObject {
 private struct HUDView: View {
     let room: String
     let feedback: SonosFeedback
-    let arrowX: CGFloat
+    let arrowX: CGFloat?
     @ObservedObject var trackInfo: HUDTrackInfo
 
     private var hasVolumeBar: Bool {
@@ -200,7 +203,7 @@ private struct HUDView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.top, 10)
+        .padding(.top, arrowX == nil ? 0 : 10)
         .background(.regularMaterial, in: HUDShape(arrowX: arrowX))
         .clipShape(HUDShape(arrowX: arrowX))
         .overlay {
@@ -211,18 +214,20 @@ private struct HUDView: View {
 }
 
 private struct HUDShape: Shape {
-    let arrowX: CGFloat
+    let arrowX: CGFloat?
 
     func path(in rect: CGRect) -> Path {
-        let top: CGFloat = 10
+        let top: CGFloat = arrowX == nil ? 0 : 10
         let radius: CGFloat = 20
         let width = rect.width
         let height = rect.height
         var path = Path()
         path.move(to: CGPoint(x: radius, y: top))
-        path.addLine(to: CGPoint(x: arrowX - 8, y: top))
-        path.addLine(to: CGPoint(x: arrowX, y: 0))
-        path.addLine(to: CGPoint(x: arrowX + 8, y: top))
+        if let arrowX = arrowX {
+            path.addLine(to: CGPoint(x: arrowX - 8, y: top))
+            path.addLine(to: CGPoint(x: arrowX, y: 0))
+            path.addLine(to: CGPoint(x: arrowX + 8, y: top))
+        }
         path.addLine(to: CGPoint(x: width - radius, y: top))
         path.addQuadCurve(to: CGPoint(x: width, y: top + radius), control: CGPoint(x: width, y: top))
         path.addLine(to: CGPoint(x: width, y: height - radius))

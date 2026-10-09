@@ -70,6 +70,8 @@ The app reports **Track restarted** only after the same track returns near its s
 If restart fails, the app sends Previous only when available. Otherwise it reports **Previous unavailable**.
 
 The media-key HUD appears below the menu bar icon without taking focus.
+If the menu bar is hidden, the HUD has no arrow and sits near the safe top edge.
+The safe edge leaves room for a display notch.
 It shows results and a delayed loading indicator for slow commands.
 Extra volume presses do not accumulate while a volume request is pending.
 
@@ -90,6 +92,7 @@ Track info has separate switches for the HUD and menu. Both start off.
 When enabled, the app shows the cover, title, and artist from Sonos. Radio can show station details.
 Track info refreshes every 15 seconds in the background, on view opening, and every 5 seconds while its view is visible.
 Both views share the track data. Turn both switches off to stop track updates.
+The menu keeps its track section while closed, so its height stays fixed when it opens.
 With HUD track info enabled, Next, Previous, and restart results stay visible for 3 seconds.
 
 The menu and HUD appear one at a time.

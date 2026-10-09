@@ -46,7 +46,7 @@ struct MenuView: View {
                 }
             }
 
-            if model.showTrackInfoInMenu && model.menuVisible {
+            if model.showTrackInfoInMenu {
                 TrackInfoView(track: model.track, emptyText: model.trackError ?? (model.trackLoading ? "Loading track info…" : "No track information"))
             }
 
