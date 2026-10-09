@@ -3,6 +3,7 @@ import AppKit
 
 struct MenuView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var updates: UpdateChecker
     let openSettings: () -> Void
     let openAbout: () -> Void
 
@@ -69,11 +70,18 @@ struct MenuView: View {
             }
 
             PanelSection(topDivider: true) {
-                ActionGroup(actions: [
-                    .init(title: "Settings", icon: "gearshape.fill", perform: openSettings),
-                    .init(title: "About", icon: "info.circle.fill", perform: openAbout),
-                    .init(title: "Quit", icon: "power", perform: model.quit)
-                ])
+                VStack(spacing: 10) {
+                    if updates.availableVersion != nil {
+                        ActionGroup(actions: [
+                            .init(title: "Update available", icon: "arrow.down.circle.fill", perform: updates.openReleases)
+                        ], tint: .orange, background: .orange.opacity(0.18))
+                    }
+                    ActionGroup(actions: [
+                        .init(title: "Settings", icon: "gearshape.fill", perform: openSettings),
+                        .init(title: "About", icon: "info.circle.fill", perform: openAbout),
+                        .init(title: "Quit", icon: "power", perform: model.quit)
+                    ])
+                }
             }
         }
         .frame(width: 300)

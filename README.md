@@ -25,6 +25,13 @@ brew update
 brew upgrade --cask sonos-keys
 ```
 
+The app checks GitHub Releases at startup and once per hour.
+If a newer version exists, an orange **Update available** button appears above the menu actions.
+The button opens the Releases page. Download and install the update, or use Homebrew.
+Use **Check for Updates** in About to check immediately and see the result.
+If a check fails, a previously found update stays visible. No update installs automatically.
+The check uses built-in macOS networking and adds no dependency.
+
 ## First use and permissions
 
 Allow Sonos Keys in System Settings → Privacy & Security → Accessibility and Input Monitoring.

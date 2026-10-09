@@ -14,6 +14,7 @@ struct SonosKeysApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let model = AppModel()
+    private let updates = UpdateChecker()
     private var statusItem: NSStatusItem!
     private let menu = NSPopover()
     private var settingsWindow: NSWindow?
@@ -41,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
         menu.contentViewController = NSHostingController(rootView: MenuView(
             model: model,
+            updates: updates,
             openSettings: { [weak self] in self?.showSettings() },
             openAbout: { [weak self] in self?.showAbout() }
         ))
@@ -98,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "About Sonos Keys"
             window.isReleasedWhenClosed = false
-            let view = NSHostingView(rootView: AboutView())
+            let view = NSHostingView(rootView: AboutView(updates: updates))
             window.contentView = view
             window.setContentSize(view.fittingSize)
             window.center()
