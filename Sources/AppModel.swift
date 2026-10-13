@@ -4,7 +4,8 @@ import ServiceManagement
 import CoreAudio
 
 final class AppModel: ObservableObject {
-    @Published private(set) var enabled = false
+    @Published private(set) var enabled = false { didSet { updateStatusIcon() } }
+    @Published private(set) var automaticControl: Bool
     @Published private(set) var room: String
     @Published private(set) var speakerIP: String
     @Published private(set) var inverted: Bool
@@ -48,8 +49,12 @@ final class AppModel: ObservableObject {
     private var controlsClient: Sonos?
     private var controlsTimer: Timer?
     private let controlsWorker = DispatchQueue(label: "sonos-keys.menu-controls")
+    private var availability: SonosAvailability?
+    private var automaticOverride = false
+    private weak var statusButton: NSStatusBarButton?
 
     init() {
+        automaticControl = defaults.bool(forKey: "automaticControl")
         room = defaults.string(forKey: "room") ?? ""
         speakerIP = defaults.string(forKey: "speakerIP") ?? ""
         volumeStep = min(20, max(1, defaults.object(forKey: "volumeStep") as? Int ?? 2))
@@ -65,7 +70,8 @@ final class AppModel: ObservableObject {
         }
         refreshLoginStatus()
         updateTrackPolling()
-        if !room.isEmpty && defaults.object(forKey: "enabled") as? Bool != false {
+        if automaticControl { startAvailability() }
+        else if !room.isEmpty && defaults.object(forKey: "enabled") as? Bool != false {
             DispatchQueue.main.async { [weak self] in self?.enable() }
         }
     }
@@ -100,7 +106,11 @@ final class AppModel: ObservableObject {
             updateTrackPolling()
             if menuVisible { refreshControls() }
             stop()
-            if wasEnabled || enableFirstRoom { enable() }
+            if automaticControl {
+                startAvailability()
+                if automaticOverride && wasEnabled { enable() }
+            }
+            else if wasEnabled || enableFirstRoom { enable() }
         } else {
             listener?.update(modifiers: modifiers, inverted: inverted, volumeStep: volumeStep)
         }
@@ -286,10 +296,41 @@ final class AppModel: ObservableObject {
     }
 
     func toggle() {
-        if enabled {
-            stop()
-            defaults.set(false, forKey: "enabled")
-        } else { enable() }
+        if automaticControl { automaticOverride = true }
+        setControlEnabled(!enabled)
+        defaults.set(enabled, forKey: "enabled")
+    }
+
+    private func setControlEnabled(_ value: Bool) {
+        guard enabled != value else { return }
+        if value { enable() }
+        else { stop() }
+        if enabled == value { hud.show(room: room, feedback: .enabled(value)) }
+    }
+
+    func setAutomaticControl(_ value: Bool) {
+        automaticControl = value
+        defaults.set(value, forKey: "automaticControl")
+        automaticOverride = false
+        startAvailability()
+        if !value { defaults.set(enabled, forKey: "enabled") }
+    }
+
+    private func startAvailability() {
+        availability?.stop()
+        availability = nil
+        guard automaticControl, !room.isEmpty else { return }
+        let availability = SonosAvailability(settings: SonosSettings(room: room, volumeStep: volumeStep, speakerIP: speakerIP))
+        availability.onNetworkChange = { [weak self, weak availability] in
+            guard let self = self, self.availability === availability else { return }
+            self.automaticOverride = false
+        }
+        availability.onChange = { [weak self, weak availability] reachable in
+            guard let self = self, self.availability === availability, !self.automaticOverride else { return }
+            self.setControlEnabled(reachable)
+        }
+        self.availability = availability
+        availability.start()
     }
 
     private func enable() {
@@ -376,10 +417,39 @@ final class AppModel: ObservableObject {
     func openLoginSettings() { SMAppService.openSystemSettingsLoginItems() }
 
     func attachStatusButton(_ button: NSStatusBarButton) {
+        statusButton = button
+        updateStatusIcon()
         hud.anchorRect = { [weak button] in
             guard let button = button, let window = button.window else { return nil }
             return window.convertToScreen(button.convert(button.bounds, to: nil))
         }
+    }
+
+    private func updateStatusIcon() {
+        let title = enabled ? "Sonos Keys — Enabled" : "Sonos Keys — Disabled"
+        let speaker = NSImage(systemSymbolName: "hifispeaker.fill", accessibilityDescription: title)
+        if enabled { statusButton?.image = speaker }
+        else {
+            let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
+                speaker?.draw(in: rect.insetBy(dx: 3, dy: 1))
+                let slash = NSBezierPath()
+                slash.move(to: NSPoint(x: 2, y: 16))
+                slash.line(to: NSPoint(x: 16, y: 2))
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current?.compositingOperation = .clear
+                slash.lineWidth = 5
+                slash.stroke()
+                NSGraphicsContext.restoreGraphicsState()
+                slash.lineWidth = 2
+                NSColor.black.setStroke()
+                slash.stroke()
+                return true
+            }
+            image.isTemplate = true
+            image.accessibilityDescription = title
+            statusButton?.image = image
+        }
+        statusButton?.toolTip = title
     }
 
     func stop() {
@@ -391,6 +461,7 @@ final class AppModel: ObservableObject {
     }
 
     func quit() {
+        availability?.stop()
         stop()
         NSApp.terminate(nil)
     }

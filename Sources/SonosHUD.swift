@@ -146,6 +146,7 @@ private struct HUDView: View {
 
     private var presentation: (title: String, symbol: String, volume: Int?) {
         switch feedback {
+        case .enabled(let enabled): return (enabled ? "Enabled" : "Disabled", enabled ? "checkmark.circle.fill" : "slash.circle.fill", nil)
         case .loading: return ("Updating…", "", nil)
         case .failed: return ("Command failed", "exclamationmark.triangle.fill", nil)
         case .volume(let volume):
@@ -163,6 +164,7 @@ private struct HUDView: View {
 
     var body: some View {
         let content = presentation
+        let heading = if case .enabled = feedback { "Sonos Keys" } else { room }
         VStack(spacing: 0) {
             PanelSection {
                 VStack(alignment: .leading, spacing: 12) {
@@ -175,7 +177,7 @@ private struct HUDView: View {
                             }
                         }
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(room)
+                            Text(heading)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)

@@ -102,7 +102,10 @@ Opening the menu also cancels delayed HUD feedback.
 ## Settings
 
 Changes apply immediately and stay on your Mac.
-Settings changes preserve the enabled or disabled media-key state. If you disable Sonos keys, the app discards commands that did not start.
+Without automatic control, settings changes preserve the enabled or disabled media-key state. If you disable Sonos keys, the app discards commands that did not start.
+The menu bar speaker icon has a slash with a transparent gap when media-key control is disabled. Its tooltip also shows the state.
+A HUD shows **Sonos Keys** with **Enabled** or **Disabled** after manual and automatic control changes.
+Playback and volume HUDs keep the Sonos room name.
 Settings uses cards with right-aligned switches. Launch at login has its own card.
 The scroll area keeps the Close button visible.
 
@@ -110,11 +113,19 @@ The scroll area keeps the Close button visible.
 - Choose a volume step from 1 to 20.
 - Choose the modifiers and the default media-key route.
 - Enable track info separately for the HUD and menu.
+- Enable **Automatically enable when Sonos is available** to follow your selected room's availability.
 - Enable **Launch at login** to open the app when you sign in.
 
 For a fixed speaker address, turn on **Manual**, enter any speaker's IPv4 address, then click **Refresh**.
 A valid address applies immediately. An incomplete address leaves the previous address active.
 If you turn Manual off, the app clears the stored address and uses automatic discovery.
+
+Automatic control starts off. It checks the selected room every 30 seconds and after a network change.
+One successful check enables media-key control. Three failed checks disable it.
+Playback and volume errors do not affect this check.
+Availability checks read the room device description over HTTP. They send no playback or volume commands.
+If you toggle control manually, that choice stays in effect until the next network change.
+This works with Wi-Fi, Ethernet, and Manual IP. It needs no Wi-Fi name or location permission.
 
 ## Local network behavior
 
@@ -173,6 +184,7 @@ Restrict the Homebrew token to the tap repository and renew it before expiry.
 
 Before a release, check media-key routes, modifiers, discovery, grouped playback, volume, mute, permissions, and launch at login on a Mac.
 Also check menu controls, track updates, and rapid menu/HUD transitions.
+Check automatic control and manual overrides after Wi-Fi and Ethernet changes.
 Commit the release code to `main`, then create and push its version tag.
 After the workflow succeeds, check the downloaded app from Applications.
 If the tagged source needs a fix, use a new version tag. Otherwise retry the failed run.

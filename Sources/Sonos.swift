@@ -2,6 +2,7 @@ import Foundation
 import Darwin
 
 enum SonosFeedback {
+    case enabled(Bool)
     case loading(volume: Bool)
     case failed
     case volume(Int)
@@ -63,7 +64,7 @@ final class Sonos {
     init(_ settings: SonosSettings) { self.settings = settings }
 
     private func request(_ url: URL, body: String? = nil, action: String? = nil) throws -> Data {
-        var request = URLRequest(url: url, timeoutInterval: 5)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 5)
         if let body = body {
             request.httpMethod = "POST"
             request.httpBody = Data(body.utf8)
@@ -185,6 +186,27 @@ final class Sonos {
     func refreshTopology() throws {
         cachedTopology = nil
         _ = try target()
+    }
+
+    func checkAvailability() throws {
+        do {
+            if let selectedRoom = selectedRoom {
+                let speaker = try describe(selectedRoom.location)
+                guard speaker.uuid == selectedRoom.uuid,
+                      speaker.room.caseInsensitiveCompare(settings.room) == .orderedSame else {
+                    throw Failure(message: "The selected Sonos room changed.")
+                }
+                self.selectedRoom = speaker
+            } else {
+                try discover()
+                let matches = speakers.filter { $0.room.caseInsensitiveCompare(settings.room) == .orderedSame }
+                if matches.count == 1 { selectedRoom = matches[0] }
+                else { _ = try target() }
+            }
+        } catch {
+            invalidateCache()
+            throw error
+        }
     }
 
     private func topology() throws -> Element {

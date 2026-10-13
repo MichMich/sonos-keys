@@ -183,6 +183,22 @@ struct SettingsView: View {
                         }
                     }
 
+                    SettingsCard(title: "Automatic enable/disable", icon: "network") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle("Automatically enable when Sonos is available", isOn: Binding(
+                                get: { model.automaticControl },
+                                set: { model.setAutomaticControl($0) }
+                            ))
+                            .toggleStyle(SettingsToggleStyle())
+                            Text("Turn media-key control on when your Sonos room is available, and off when it is unavailable.")
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("You can still use the menu toggle. Your choice lasts until you change networks.")
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
                     SettingsCard(title: "Startup", icon: "power") {
                         VStack(alignment: .leading, spacing: 8) {
                             Toggle("Launch at login", isOn: Binding(
